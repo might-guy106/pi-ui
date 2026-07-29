@@ -1,0 +1,53 @@
+{
+  "name": "@vetcha-nath/pi-ui",
+  "version": "1.2.0",
+  "description": "Custom pi terminal UI with themes, layout, and message rendering",
+  "type": "module",
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "themes": [
+      "./themes"
+    ],
+    "image": "https://img.dog/file/1779944542014_image.webp"
+  },
+  "files": [
+    "src/",
+    "themes/",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vetcha-nath/pi-ui.git"
+  },
+  "author": "vetcha-nath",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "eslint src eslint.config.js",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}
