@@ -65,12 +65,8 @@ function getCwdLabel(cwd?: string): string {
   return base || cwd;
 }
 
-function getUsageLabel(usage: UsageTotals): string {
-  if (!usage.input && !usage.output) {
-    return '-';
-  }
-
-  return `↑${formatTokens(usage.input)} ↓${formatTokens(usage.output)}`;
+function getUsageLabel(_usage: UsageTotals): string {
+  return '';
 }
 
 function getCostLabel(cost: number): string {
@@ -130,7 +126,6 @@ export function buildCoreFooterSections(
     formatBadge(theme.fg('accent', ` ${FOOTER_ICONS.cwd} `), theme.fg('muted', getCwdLabel(ctx.cwd))),
     formatBadge(theme.fg('accent', ` ${FOOTER_ICONS.branch} `), theme.fg('muted', gitBranch || '-')),
     formatBadge(theme.fg('accent', ` ${FOOTER_ICONS.context} `), theme.fg('muted', getContextLabel(ctx))),
-    formatBadge(theme.fg('accent', ` ${FOOTER_ICONS.usage} `), theme.fg('muted', getUsageLabel(usage))),
     formatBadge(theme.fg('accent', ` ${FOOTER_ICONS.cost} `), theme.fg('muted', getCostLabel(usage.cost))),
   ];
 }
