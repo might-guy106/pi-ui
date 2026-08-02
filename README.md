@@ -211,30 +211,68 @@ cd pi-ui
 pi install ./
 ```
 
-### Publish Checklist
+### Publishing Pipeline
 
-This project publishes through GitHub Actions when a version tag is pushed.
+#### Overview
 
-Before publishing, verify the package contents:
+This repo uses a **tag-triggered GitHub Actions workflow** (`.github/workflows/release.yml`) to publish to npm automatically. Pushing a version tag to GitHub is the only step needed — the workflow validates, installs, publishes, and creates a GitHub Release.
 
+#### One-time Setup (already done, documented for reference)
+
+| What | Detail |
+|---|---|
+| npm account | `@mightguy` on [npmjs.com](https://npmjs.com) |
+| npm token | Granular or Automation token stored as GitHub repo secret **`NPM_TOKEN`** |
+| GitHub repo secret | `https://github.com/might-guy106/pi-ui/settings/secrets/actions` → `NPM_TOKEN` |
+| SSH identity | Uses `github-personal` host alias → `~/.ssh/id_ed25519_personal` |
+| Local git user | `user.email = pankajnath1724@gmail.com`, `user.name = Pankaj Nath` (set per-repo, not global) |
+
+To re-apply the local git identity on a fresh clone:
 ```bash
-npm pack --dry-run
+git config user.email "pankajnath1724@gmail.com"
+git config user.name "Pankaj Nath"
 ```
 
-Then create and push a tag that matches `package.json`:
+#### How the workflow works
+
+1. **Trigger** — any tag matching `v*.*.*` pushed to GitHub fires the workflow
+2. **Validate** — checks that the git tag (e.g. `v1.2.1`) matches `v` + `version` in `package.json`. Fails fast if they differ — prevents mismatched releases
+3. **npm version check** — if `@mightguy/pi-ui@<version>` already exists on npm, the publish step is skipped (idempotent)
+4. **Install** — runs `npm install`
+5. **Publish** — runs `npm publish --provenance` using `NODE_AUTH_TOKEN` mapped from the `NPM_TOKEN` secret
+6. **GitHub Release** — auto-generated release notes are posted
+
+#### Publishing a new version (3 commands)
 
 ```bash
-git tag vX.Y.Z
-git push origin vX.Y.Z
+# 1. Bump version — updates package.json, commits, and creates a git tag
+npm version patch   # or: minor | major
+
+# 2. Push the commit
+git push origin main
+
+# 3. Push the tag — this triggers the GitHub Actions workflow
+git push origin --tags
 ```
 
-Before pushing the tag, configure npm Trusted Publishing for this package:
+> **Why tags?** A git tag is a permanent pointer to a specific commit. `npm version patch` creates both the version bump commit and the tag in one step. Pushing the tag is what fires the CI pipeline.
 
-- Publisher: GitHub Actions
-- Owner: `DragonYH`
-- Repository: `pi-ui`
-- Workflow: `release.yml`
-- Environment: leave empty
+#### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Workflow not triggered | Make sure the tag was pushed: `git push origin --tags` |
+| `Tag vX.Y.Z does not match package version` | Tag and `package.json` version are out of sync — delete the tag, fix the version, re-tag |
+| `403 Forbidden` on npm publish | `NPM_TOKEN` secret is missing, expired, or has wrong scope — regenerate on npmjs.com and update the repo secret |
+| Tag already exists locally | `git tag -d vX.Y.Z` to delete locally, then re-create |
+
+To delete and re-push a tag:
+```bash
+git tag -d v1.2.1
+git push origin --delete v1.2.1
+git tag v1.2.1
+git push origin v1.2.1
+```
 
 ### Adding a New Theme
 
