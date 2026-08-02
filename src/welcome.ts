@@ -39,7 +39,7 @@ import {
 
 const MAX_STACKED_COLUMN_WIDTH = 80;
 const MIN_GRID_COLUMN_WIDTH = 40;
-const MAX_GRID_COLUMN_WIDTH = 70;
+const MAX_GRID_COLUMN_WIDTH = 60;
 const GRID_COLUMN_GAP = 4;
 const MAX_LIST_ROWS_PER_COLUMN = 6;
 const MIN_LIST_COLUMN_WIDTH = 22;
@@ -55,15 +55,7 @@ const RESOURCE_BRIDGE_KEY = "__mightguyWelcomeScreenResourceBridge";
  * Custom ASCII banner shown above the resource grid.
  * Each string is one line; rendered centred in its column.
  */
-const PI_BANNER = [
-  "███╗   ███╗██╗ ██████╗ ██╗  ██╗████████╗ ██████╗ ██╗   ██╗██╗   ██╗",
-  "████╗ ████║██║██╔════╝ ██║  ██║╚══██╔══╝██╔════╝ ██║   ██║╚██╗ ██╔╝",
-  "██╔████╔██║██║██║  ███╗███████║   ██║   ██║  ███╗██║   ██║ ╚████╔╝ ",
-  "██║╚██╔╝██║██║██║   ██║██╔══██║   ██║   ██║   ██║██║   ██║  ╚██╔╝  ",
-  "██║ ╚═╝ ██║██║╚██████╔╝██║  ██║   ██║   ╚██████╔╝╚██████╔╝   ██║   ",
-  "╚═╝     ╚═╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝  ╚═════╝   ╚═╝   ",
-  "                           @mightguy/pi-ui                           ",
-];
+const PI_BANNER = ["█████████", "███   ███", "██████   ███", "███      ███"];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
