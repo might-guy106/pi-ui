@@ -8,7 +8,7 @@ export const FOOTER_ICONS = {
   cwd: "",
   context: "󰨊",
   usage: "󰓡",
-  cost: "󰈁",
+  cost: "󰇁",
   branch: "",
   core: "󰏿",
   extension: "",
