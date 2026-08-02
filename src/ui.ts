@@ -1,6 +1,7 @@
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, SessionStartEvent } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { BoxedEditor } from "./editor.ts";
+import { makeWelcomeHeader } from "./welcome.ts";
 import { collectUsage, buildCoreFooterSections, renderCoreFooterLine, renderExtensionStatusLine, formatTokens } from "./footer.ts";
 
 export const WORKING_INDICATOR_FRAMES = ["󰄰", "󰪞", "󰪟", "󰪠", "󰪡", "󰪢", "󰪣", "󰪤", "󰪥"] as const;
@@ -58,7 +59,7 @@ export function registerMessageRenderer(pi: ExtensionAPI): void {
   });
 }
 
-export function setupCustomUI(pi: ExtensionAPI, ctx: ExtensionContext): void {
+export function setupCustomUI(pi: ExtensionAPI, ctx: ExtensionContext, event?: SessionStartEvent): void {
   // 清理前一个 session 可能遗留的定时器（定时器是 module 级共享的）
   clearInterval(workingIndicatorTimer);
   workingIndicatorTimer = undefined;
@@ -112,6 +113,7 @@ export function setupCustomUI(pi: ExtensionAPI, ctx: ExtensionContext): void {
     workingIndicatorTimer = undefined;
   };
 
+  ctx.ui.setHeader((tui, theme) => makeWelcomeHeader(tui, theme, event?.reason === "startup"));
   ctx.ui.setEditorComponent((tui, theme, keybindings) => new BoxedEditor(tui, theme, keybindings));
 
   ctx.ui.setFooter((tui, theme, footerData) => ({
