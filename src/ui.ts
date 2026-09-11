@@ -1,6 +1,5 @@
-import type { ExtensionAPI, ExtensionContext, SessionStartEvent } from "@earendil-works/pi-coding-agent";
+import { CustomEditor, type ExtensionAPI, type ExtensionContext, type SessionStartEvent } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { BoxedEditor } from "./editor.ts";
 import { makeWelcomeHeader } from "./welcome.ts";
 import { collectUsage, buildCoreFooterSections, renderCoreFooterLine, renderExtensionStatusLine, formatTokens } from "./footer.ts";
 
@@ -114,7 +113,7 @@ export function setupCustomUI(pi: ExtensionAPI, ctx: ExtensionContext, event?: S
   };
 
   ctx.ui.setHeader((tui, theme) => makeWelcomeHeader(tui, theme, event?.reason === "startup"));
-  ctx.ui.setEditorComponent((tui, theme, keybindings) => new BoxedEditor(tui, theme, keybindings));
+  ctx.ui.setEditorComponent((tui, theme, keybindings) => new CustomEditor(tui, theme, keybindings));
 
   ctx.ui.setFooter((tui, theme, footerData) => ({
     dispose: footerData.onBranchChange(() => tui.requestRender()),

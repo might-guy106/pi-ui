@@ -19,7 +19,7 @@
 
 - 🖥️ **Custom Status Bar** — Real-time footer showing model, thinking level, cwd, git branch, context usage (%), and API cost
 - 🎨 **Catppuccin Dark Theme** — Dark theme based on [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) with 64+ color mappings
-- ✨ **Boxed Editor** — Unicode border editor (`╭─╮` style) with elegant rounded corners
+- ✨ **Minimal Editor** — clean horizontal rule above and below the prompt
 - ⏳ **Adaptive Working Indicator** — Animated spinner with 3-tone coloring (green→yellow→red) and real-time elapsed time
 - 🌟 **Welcome Screen** — Custom startup header with pi banner and resource grid (Context, Skills, Prompts, Extensions)
 - 🔌 **Zero Dependencies** — Pure peer-dependency package; no additional npm packages required
@@ -50,9 +50,9 @@ Once installed, pi-ui works **automatically** — no configuration required. On 
 ### Editor
 
 ```
-╭──────────────────────────────────────────╮
-│  Your message here...                    │
-╰──────────────────────────────────────────╯
+──────────────────────────────────────────
+  Your message here...
+──────────────────────────────────────────
 ```
 
 ### Working Indicator
@@ -79,7 +79,6 @@ pi-ui/
 │   ├── index.ts     # Extension entry
 │   ├── ui.ts        # UI setup — footer, editor, spinner, message renderer
 │   ├── footer.ts    # Footer rendering
-│   ├── editor.ts    # BoxedEditor component
 │   └── welcome.ts   # Welcome screen header and resource grid
 ├── themes/
 │   └── catppuccin-dark.json
@@ -94,7 +93,7 @@ pi-ui/
 
 See [docs/development.md](./docs/development.md) for the full development and publishing workflow.
 
-## 🙏 Credits
+## Credits
 
 This project is a fork of [DragonYH/pi-ui](https://github.com/DragonYH/pi-ui), originally published as [`@rokiy/pi-ui`](https://www.npmjs.com/package/@rokiy/pi-ui).
 
