@@ -8,7 +8,6 @@ import {
 	type ExtensionAPI,
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { makeWelcomeHeader } from "./welcome.ts";
 import { loadConfig } from "./config.ts";
 import { BoxEditor } from "./editor/box-editor.ts";
 import { resolveUserZoneStyle, USER_ZONE_STYLE_NAMES } from "./editor/user-zone.ts";
@@ -30,7 +29,7 @@ import {
 } from "./messages/assistant-streaming-state.ts";
 import { setFullTheme } from "./theme/theme-extras.ts";
 import { applyTerminalPageBackgroundOsc11 } from "./theme/terminal-bg.ts";
-import { suppressStartupModelScopeLog } from "./startup.ts";
+import { suppressStartupModelScopeLog, setCompactStartupHeader } from "./startup.ts";
 import {
 	createMergedWorkingLoader,
 	workingStateForAssistantMessage,
@@ -146,7 +145,9 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	});
 	state.loader.configure();
 
-	ctx.ui.setHeader((tui, theme) => makeWelcomeHeader(tui, theme, true));
+	// Gradient logo header + compact resource summary — the upstream startup
+	// look. The header itself is skipped under pi's quietStartup setting.
+	setCompactStartupHeader(ctx.ui, ctx.cwd);
 
 	const readThinkingLevel = (): string | undefined => {
 		try {

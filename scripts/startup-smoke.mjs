@@ -111,6 +111,66 @@ setFullTheme({ sourcePath: otherThemePath, fg: (c, t) => t, bold: (t) => t }, tr
 const noBg = applyTerminalPageBackgroundOsc11({ sourcePath: otherThemePath }, fakeTerminal);
 check("osc11 no-ops without a page background", noBg === undefined && writes.length === 2);
 
+// --- compact resource summary (installStartupUiPatch) ---
+const { installStartupUiPatch } = await import("../src/startup.ts");
+
+function makeFakeMode() {
+	const calls = [];
+	const chatChildren = [];
+	class FakeMode {
+		options = { verbose: false };
+		session = {
+			resourceLoader: {
+				getSkills: () => ({ skills: [{ name: "handbook" }, { name: "git-join" }] }),
+				getThemes: () => ({ themes: [{ name: "catppuccin-dark", sourcePath: "/themes/x.json" }] }),
+				getExtensions: () => ({ extensions: [{ path: "/ext/pi-ui/src/index.ts" }] }),
+				getAgentsFiles: () => ({ agentsFiles: [{ path: "/tmp/AGENTS.md", content: "one two three four five" }] }),
+				getSystemPrompt: () => "be brief and helpful",
+				getAppendSystemPrompt: () => [],
+			},
+			scopedModels: [{ model: { provider: "openai", id: "gpt-test" } }],
+			promptTemplates: [{ name: "review" }],
+			getAllTools: () => [
+				{ name: "read", sourceInfo: { source: "builtin" } },
+				{ name: "web-search", sourceInfo: { source: "npm:@scope/tools" } },
+			],
+			getActiveToolNames: () => ["read", "web-search"],
+		};
+		sessionManager = { getCwd: () => tempHome };
+		settingsManager = { getQuietStartup: () => false };
+		chatContainer = { addChild: (c) => chatChildren.push(c) };
+		getStartupExpansionState() { return false; }
+		formatContextPath(p) { return p; }
+		getCompactExtensionLabels(extensions) { return extensions.map((e) => e.path.split("/").pop()); }
+		getCompactPathLabel(p) { return p; }
+		showLoadedResources(options) { calls.push({ options, quietDuringCall: this.settingsManager.getQuietStartup() }); return []; }
+	}
+	return { FakeMode, calls, chatChildren };
+}
+
+const { FakeMode, calls, chatChildren } = makeFakeMode();
+installStartupUiPatch(FakeMode);
+const fakeMode = new FakeMode();
+const rendered = fakeMode.showLoadedResources({ force: true });
+check("resource patch: original still invoked once", calls.length === 1);
+check("resource patch: native listing suppressed during original call", calls[0].quietDuringCall === true);
+check("resource patch: quiet setting restored after call", fakeMode.settingsManager.getQuietStartup() === false);
+check("resource patch: renders spacer + summary + spacer", chatChildren.length === 3);
+const summary = chatChildren[1];
+const collapsed = summary.getCollapsedText();
+const expanded = summary.getExpandedText();
+const collapsedPlain = stripAnsi(collapsed).replace(/\s+/g, " ").trim();
+check("resource summary collapsed shows counts row", /◆ Resources/.test(collapsedPlain) && collapsedPlain.includes("skills 2") && collapsedPlain.includes("tools 2"), collapsedPlain);
+check("resource summary collapsed shows context + models + prompts + themes", ["context 1", "models 1", "prompts 1", "themes 1"].every((frag) => stripAnsi(collapsed).includes(frag)), stripAnsi(collapsed));
+check("resource summary expands into tables", stripAnsi(expanded).includes("System & Context") && stripAnsi(expanded).includes("Available Tools"), stripAnsi(expanded).slice(0, 200));
+check("resource summary: quiet startup skips the patch path", (() => {
+	fakeMode.settingsManager.getQuietStartup = () => true;
+	const before = calls.length;
+	fakeMode.showLoadedResources({ force: false });
+	fakeMode.settingsManager.getQuietStartup = () => false;
+	return calls.length === before + 1 && chatChildren.length === 3; // original called directly, nothing added
+})());
+
 rmSync(tempHome, { recursive: true, force: true });
 
 if (failures > 0) {

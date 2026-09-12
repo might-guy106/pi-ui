@@ -10,6 +10,7 @@ pi-ui's editor zone, loader, and theme tooling are ported from [sting8k/pi-droid
 | `src/theme/terminal-bg.ts` | `theme/terminal-background.ts` | Import paths only; rebranded nothing (no symbols). |
 | `src/welcome.ts` | — | Brand column now renders the gradient logo (falls back to the small banner under 20 columns); version line became `Pi v<version>`. |
 | `src/ui.ts` | `index.ts` wiring | OSC 11 applied per editor creation with the current theme, restored on session shutdown/theme change; log suppressor installed at session start. |
+| resource summary + header switch | `startup-ui.ts` (rest) | After review feedback the remaining half was ported too: `installStartupUiPatch` replaces pi's native resource listing with the compact `◆ Resources …` expandable row, and `setCompactStartupHeader` (logo + hints + ready, quiet-aware) replaced the welcome grid. `src/welcome.ts` was removed. |
 
 ## Ported (Phase 3 — messages)
 
@@ -63,7 +64,7 @@ Deliberately not ported from tool-tags: `quick-edit.ts` (renders tools owned by 
 ## Deliberately different
 
 - **Footer**: the editor zone embeds the stats (upstream behavior) only when `footer: true` (default). With the custom editor off, pi-ui's legacy standalone footer keeps working.
-- **Welcome screen**: we keep pi-ui's resource-grid welcome screen instead of upstream's compact resource summary.
+- **Welcome screen**: initially kept as a deviation; replaced by upstream's compact resource summary after review feedback (the grid's bridge into pi's resource panel was the most fragile part of the old package and is gone).
 - **Loader**: merged — upstream's state labels + elapsed clock, plus pi-ui's adaptive tone colors.
 
 ## Planned (see the port plan)

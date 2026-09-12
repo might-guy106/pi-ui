@@ -25,7 +25,7 @@
 - 🖥️ **Custom Status Bar** — real-time footer showing model, thinking level, cwd, git branch, context usage (%), and API cost (used when the custom editor is off)
 - 🎨 **Catppuccin Dark Theme** — Dark theme based on [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) with 64+ color mappings
 - ⏳ **State-aware Working Loader** — braille spinner with labels that follow the work (Working / Thinking / Answering / Running), elapsed time, and adaptive green→yellow→red tone when the stream stalls
-- 🌟 **Welcome Screen** — Custom startup header with pi banner and resource grid (Context, Skills, Prompts, Extensions)
+- 🌟 **Compact Startup** — Gradient pi logo with key hints and a one-line `◆ Resources …` summary (expandable into System & Context / Available Tools tables) instead of pi's full resource listing
 - ⚙️ **Zero-config** — sensible defaults, optional config at `~/.pi/agent/pi-ui.json`
 - 🔌 **Zero Dependencies** — Pure peer-dependency package; no additional npm packages required
 - ⚡ **TypeScript Native** — Loaded directly via [jiti](https://github.com/unjs/jiti) — no build step needed
@@ -88,7 +88,7 @@ pi-ui/
 │   ├── loader.ts    # Working loader (spinner + state labels + tone)
 │   ├── footer.ts    # Legacy standalone footer (fallback)
 │   ├── footer-patch.ts # Footer data capture for the editor zone
-│   ├── welcome.ts   # Welcome screen header and resource grid
+│   ├── startup.ts   # Gradient logo header + compact resource summary
 │   ├── editor/      # BoxEditor + style presets + cluster helper
 │   ├── tools/       # Tool badges, split diff, presentation styles
 │   ├── messages/    # Prefixes, boxed blocks, codeblock rail, streaming seam

@@ -2,13 +2,26 @@
 
 What you see when a pi session starts, and how pi-ui keeps the terminal in sync with the theme. Ported from pi-droid-styling (see [porting notes](./porting-notes.md)).
 
-## Gradient pi logo
+## Gradient pi logo + header
 
-The welcome header is topped by a 9-row block-ASCII "pi" logo with a truecolor gradient derived from your theme's accent color — a cosine wave that alternately darkens and lightens the accent across 24 steps, sampled per character with a per-row phase shift. In 256-color mode the gradient quantizes automatically.
+The session opens with a 9-row block-ASCII "pi" logo with a truecolor gradient derived from your theme's accent color — a cosine wave that alternately darkens and lightens the accent across 24 steps, sampled per character with a per-row phase shift. In 256-color mode the gradient quantizes automatically.
 
-Below the logo: `Pi v<version>`, the key hints (`/` commands · `!` bash · `ctrl+o` more), and a green `● ready`.
+Beside the logo: `Pi v<version>`, the key hints (`/` commands · `!` bash · `ctrl+o` more), and a green `● ready`. On narrow terminals the details drop under the logo; below ~14 columns only the title and status remain.
 
-On narrower terminals the details drop under the logo; below ~20 columns a small static banner takes over so the logo never clips mid-glyph. The resource grid (Context / Skills / Prompts / Extensions) renders beneath the logo block — see [the README tour](../README.md).
+## Compact resource summary
+
+Instead of pi's full resource listing, the chat opens with a one-line summary:
+
+```
+◆ Resources  ·  system 1  ·  context 1  ·  models 1  ·  tools 19  ·  skills 53  ·  extensions 18  ·  themes 25
+```
+
+Press `ctrl+o` (the tools-expand key) to expand it into two bordered tables:
+
+- **System & Context** — system prompt, append prompts, and context files with word/line counts
+- **Available Tools** — every active tool grouped by source (core, npm package, local path)
+
+The summary is rebuilt from the live session on every startup, so counts always match what pi actually loaded. If pi's `quietStartup` setting is on, both the header and the summary are skipped entirely.
 
 ## Cleaner startup
 
