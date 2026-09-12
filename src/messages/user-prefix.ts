@@ -1,5 +1,6 @@
 import { UserMessageComponent } from "@earendil-works/pi-coding-agent";
 
+import { loadConfig } from "../config.ts";
 import { getPresentationDesign } from "../tools/presentation/state.ts";
 import { dropLeadingColumns, fgHex, isHexColor, stripAnsi } from "../theme/ansi.ts";
 import { getThemeExtra } from "../theme/theme-extras.ts";
@@ -109,12 +110,18 @@ export function installUserMessagePrefix(theme: any): void {
 			}
 		}
 
-		const prefixSegment = buildPrefixSegment();
+		const config = loadConfig();
+		const prefixSegment = config.userPrefix ? buildPrefixSegment() : "";
 		const line = output[targetIndex] ?? "";
 		const presentationLine = design.stripsBackground ? stripBackgroundAnsi(line) : line;
-		const remainder = stripEmphasisAnsi(dropLeadingColumns(presentationLine, 1));
-		output[targetIndex] = `${prefixSegment}${remainder}`;
-		alignContinuationLines(output, targetIndex);
+		if (config.userPrefix) {
+			const remainder = stripEmphasisAnsi(dropLeadingColumns(presentationLine, 1));
+			output[targetIndex] = `${prefixSegment}${remainder}`;
+			alignContinuationLines(output, targetIndex);
+		} else {
+			// No prefix: keep pi's stock padding and emphasis, no ┆ rails.
+			output[targetIndex] = stripEmphasisAnsi(presentationLine);
+		}
 
 		const result = output.map((renderedLine) => {
 			const presentationLine = design.stripsBackground ? stripBackgroundAnsi(renderedLine) : renderedLine;
@@ -124,9 +131,8 @@ export function installUserMessagePrefix(theme: any): void {
 
 		if (design.compactLayout) return [...result, ""];
 
-		// Add turn divider before user message
+		// Turn divider above the user message (off by default).
 		const divider = buildDividerLine(width);
-		const showDivider = getThemeExtra(activeTheme, "showDivider") !== "false";
-		return showDivider ? [divider, "", ...result, ""] : ["", ...result, ""];
+		return config.userDivider ? [divider, "", ...result, ""] : ["", ...result, ""];
 	};
 }

@@ -25,6 +25,8 @@ pi-ui's editor zone, loader, and theme tooling are ported from [sting8k/pi-droid
 
 Not ported: `streaming-markdown-cache.ts` — dormant by design (pi-ai partials always carry `stopReason`, so its gate never engages); it is perf work anyway (Phase 5).
 
+Deviation from upstream: the user-message prefix (`❯`), the user divider, and the assistant turn divider are **off by default** (config keys `userPrefix`, `userDivider`, `assistantDivider`), where upstream always renders them. Upstream gates them through theme-file extras; we read `pi-ui.json` so the setting follows the package, not the theme.
+
 ## Ported (Phase 2 — tools + diff)
 
 | Module | Source | Changes on our side |

@@ -279,8 +279,7 @@ export function installAssistantMessagePrefix(theme: any, componentClass: any = 
 				safeVisibleWidth(renderedLine) > width ? safeTruncateToWidth(renderedLine, width, "") : renderedLine,
 			);
 			if (design.compactLayout) return compactReasonixLines(result);
-			const showDivider = getThemeExtra(activeTheme, "showDivider") !== "false";
-			return showDivider ? [divider, ...result, ""] : [...result, ""];
+			return loadConfig().assistantDivider ? [divider, ...result, ""] : [...result, ""];
 		}
 
 		const output = [...lines];
@@ -310,8 +309,7 @@ export function installAssistantMessagePrefix(theme: any, componentClass: any = 
 
 		if (design.compactLayout) return compactReasonixLines(result);
 
-		// Add turn divider before assistant message
-		const showDivider = getThemeExtra(activeTheme, "showDivider") !== "false";
-		return showDivider ? [divider, ...result, ""] : [...result, ""];
+		// Turn divider before assistant message (off by default).
+		return loadConfig().assistantDivider ? [divider, ...result, ""] : [...result, ""];
 	};
 }

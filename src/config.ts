@@ -23,6 +23,9 @@ export interface PiUiConfig {
 	maxExpandedLines: number;
 	dimToolOutput: boolean;
 	collapsedThinking: CollapsedThinkingStyle;
+	userPrefix: boolean;
+	userDivider: boolean;
+	assistantDivider: boolean;
 	footer: boolean;
 	forceOSC11: boolean;
 }
@@ -45,6 +48,9 @@ const DEFAULTS: PiUiConfig = {
 	maxExpandedLines: 50,
 	dimToolOutput: false,
 	collapsedThinking: "tail",
+	userPrefix: false,
+	userDivider: false,
+	assistantDivider: false,
 	footer: true,
 	forceOSC11: false,
 };
@@ -121,6 +127,9 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 		alwaysExpanded: booleanOrDefault(config.alwaysExpanded, DEFAULTS.alwaysExpanded),
 		maxExpandedLines: maxExpandedLinesOrDefault(config.maxExpandedLines),
 		dimToolOutput: booleanOrDefault(config.dimToolOutput, DEFAULTS.dimToolOutput),
+		userPrefix: booleanOrDefault(config.userPrefix, DEFAULTS.userPrefix),
+		userDivider: booleanOrDefault(config.userDivider, DEFAULTS.userDivider),
+		assistantDivider: booleanOrDefault(config.assistantDivider, DEFAULTS.assistantDivider),
 		footer: booleanOrDefault(config.footer, DEFAULTS.footer),
 		forceOSC11: booleanOrDefault(config.forceOSC11, DEFAULTS.forceOSC11),
 	};

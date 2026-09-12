@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Smoke test: message prefixes (assistant/user), content-run probe, core
 // message blocks, and the markdown codeblock rail. Uses the real pi theme.
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -70,14 +70,29 @@ const thinkingMsg = {
 const thinkingComponent = new AssistantMessageComponent(thinkingMsg, theme);
 const thinkingLines = thinkingComponent.render(80).map(stripAnsi).join("\n");
 check("thinking run styled", thinkingLines.includes("Here is my answer."));
-check("assistant divider before thinking runs", thinkingLines.includes("──") || thinkingLines.includes("•"), thinkingLines);
+check("no assistant divider by default", !thinkingLines.includes("───"), thinkingLines);
+check("assistant prefix marker still applied", thinkingLines.includes("•"), thinkingLines);
 
-// --- user prefix ---
+// --- user prefix (off by default) ---
 installUserMessagePrefix(undefined);
 const userComponent = new UserMessageComponent("please fix the footer");
 const userLines = userComponent.render(80).map(stripAnsi).join("\n");
-check("user prefix ❯ applied", userLines.includes("❯") || userLines.includes(">"), userLines);
+check("no user prefix by default", !userLines.includes("❯"), userLines);
+check("no divider around user message by default", !userLines.includes("───"), userLines);
 check("user text preserved", userLines.includes("please fix the footer"));
+
+// enable prefix + dividers via config and re-render
+const { configPath } = await import("../src/config.ts");
+writeFileSync(configPath(), JSON.stringify({ userPrefix: true, userDivider: true, assistantDivider: true }));
+await new Promise((resolve) => setTimeout(resolve, 1100));
+const prefixedUser = new UserMessageComponent("please fix the footer");
+const prefixedLines = prefixedUser.render(80).map(stripAnsi).join("\n");
+check("user prefix ❯ when enabled", prefixedLines.includes("❯"), prefixedLines);
+check("user divider when enabled", prefixedLines.includes("───"), prefixedLines);
+await new Promise((resolve) => setTimeout(resolve, 1100));
+const dividedComponent = new AssistantMessageComponent(thinkingMsg, theme);
+const dividedLines = dividedComponent.render(80).map(stripAnsi).join("\n");
+check("assistant divider when enabled", dividedLines.includes("───"), dividedLines);
 
 // --- streaming state tagging ---
 check("component tagged as live stream", attachComponentToStream(assistantComponent, assistantMsg) === true);

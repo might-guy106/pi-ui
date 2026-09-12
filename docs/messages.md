@@ -11,7 +11,7 @@ Every assistant turn gets a `•` marker on its first text line, with continuati
     Second line of the answer.
 ```
 
-A full-width `───` divider separates the turn from what came before it. Thinking blocks render muted and italic. The marker and divider colors come from the active theme's extras (fallback: accent / border).
+Thinking blocks render muted and italic. The marker color comes from the active theme's extras (fallback: accent). An optional full-width `───` divider above each assistant turn is available with `"assistantDivider": true` in [config](./configuration.md) (off by default).
 
 ## Thinking tail
 
@@ -23,9 +23,9 @@ With `collapsedThinking: "tail"` (default) in [config](./configuration.md), a co
 
 The trailing `▸` marks a live stream; it becomes `·` once the run finishes. Set `"collapsedThinking": "label"` to restore pi's static label.
 
-## User prefix
+## User messages
 
-User turns get a colored `❯` prefix on the theme's user-message background; wrapped continuation rows get `┆` rails.
+User messages render as plain text on the theme's message background — no prefix, no surrounding rules (the defaults). Two optional flourishes are available in [config](./configuration.md): `"userPrefix": true` adds a colored `❯` (with `┆` rails on wrapped lines) and `"userDivider": true` draws a divider line above each message.
 
 ## Core message blocks
 

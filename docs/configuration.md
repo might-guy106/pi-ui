@@ -34,6 +34,9 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `dimToolOutput` | `true`, `false` | `false` | Dim tool output so the conversation stands out. |
 | `footer` | `true`, `false` | `true` | With the custom editor active, `true` embeds the status/token line inside the editor zone and hides pi's default footer. `false` keeps pi's default footer visible below the editor. |
 | `collapsedThinking` | `tail`, `label` | `tail` | While a thinking run is collapsed, `tail` shows the end of the last thinking line with a live `▸` marker; `label` restores pi's static label. |
+| `userPrefix` | `true`, `false` | `false` | Show a `❯` prefix on user messages (with `┆` rails on wrapped lines). |
+| `userDivider` | `true`, `false` | `false` | Draw a full-width divider line above each user message. |
+| `assistantDivider` | `true`, `false` | `false` | Draw a full-width divider line above each assistant message. |
 
 | `forceOSC11` | `true`, `false` | `false` | Force the terminal background sync (OSC 11) on Windows/WSL, where it is skipped by default. See [startup](./startup.md). |
 
