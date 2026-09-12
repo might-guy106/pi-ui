@@ -1,176 +1,189 @@
-import { CustomEditor, type ExtensionAPI, type ExtensionContext, type SessionStartEvent } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import {
+	CustomEditor,
+	type ExtensionAPI,
+	type ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { makeWelcomeHeader } from "./welcome.ts";
-import { collectUsage, buildCoreFooterSections, renderCoreFooterLine, renderExtensionStatusLine, formatTokens } from "./footer.ts";
+import { loadConfig } from "./config.ts";
+import { BoxEditor } from "./editor/box-editor.ts";
+import { resolveUserZoneStyle, USER_ZONE_STYLE_NAMES } from "./editor/user-zone.ts";
+import { createGitBranchFetcher, type GitBranchFetcher } from "./core/git-status.ts";
+import { createAssistantSpeedTracker } from "./core/assistant-speed.ts";
+import {
+	createMergedWorkingLoader,
+	workingStateForAssistantMessage,
+	type MergedWorkingLoaderController,
+} from "./loader.ts";
+import { installFooterStatsPatch, getFooterStatusLine, getFooterTokenUsageLine } from "./footer-patch.ts";
 
-export const WORKING_INDICATOR_FRAMES = ["󰄰", "󰪞", "󰪟", "󰪠", "󰪡", "󰪢", "󰪣", "󰪤", "󰪥"] as const;
-
-let workingIndicatorTimer: ReturnType<typeof setInterval> | undefined;
-let lastTokenTime = 0;
-let currentWorkingTone: 'green' | 'yellow' | 'red' | undefined;
-
-const STATUS_ICONS = {
-  clock: "󰅐",
-  input: "↑",
-  output: "↓",
-  cost: "󰈁",
-} as const;
-
-let agentStartTime = 0;
-let currentRequestInput = 0;
-let currentRequestOutput = 0;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${(ms / 1000).toFixed(1)}s`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
-  return `${minutes}m ${seconds}s`;
+interface SessionState {
+	loader?: MergedWorkingLoaderController;
+	fetchBranch?: GitBranchFetcher;
+	speedTracker?: ReturnType<typeof createAssistantSpeedTracker>;
+	requestRender?: () => void;
+	stale: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+let session: SessionState | undefined;
 
-export function clearWorkingIndicatorTimer(): void {
-  clearInterval(workingIndicatorTimer);
-  workingIndicatorTimer = undefined;
-  lastTokenTime = 0;
-  currentWorkingTone = undefined;
-  agentStartTime = 0;
-  currentRequestInput = 0;
-  currentRequestOutput = 0;
+function isStaleContextError(error: unknown): boolean {
+	return error instanceof Error && error.message.includes("stale after session replacement or reload");
 }
 
-export function registerMessageRenderer(pi: ExtensionAPI): void {
-  pi.registerMessageRenderer('assistant', (message, options, theme) => {
-    const { expanded } = options;
-    let text = '';
-    text += (message as { content: string }).content;
-    if (expanded && message.details) {
-      text += '\n' + theme.fg('dim', JSON.stringify(message.details, null, 2));
-    }
-    return new Text(text, 0, 0);
-  });
+export function teardownSessionUI(): void {
+	session?.loader?.dispose();
+	session = undefined;
 }
 
-export function setupCustomUI(pi: ExtensionAPI, ctx: ExtensionContext, event?: SessionStartEvent): void {
-  // 清理前一个 session 可能遗留的定时器（定时器是 module 级共享的）
-  clearInterval(workingIndicatorTimer);
-  workingIndicatorTimer = undefined;
-  lastTokenTime = 0;
-  currentWorkingTone = undefined;
+export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
+	// A newer session_start supersedes any in-flight state from a previous one.
+	teardownSessionUI();
+	const state: SessionState = { stale: false };
+	session = state;
 
-  let rerenderFooter: (() => void) | undefined;
+	const config = loadConfig();
+	const userZoneStyle = resolveUserZoneStyle(config.userZoneStyle);
+	const useBoxEditor = USER_ZONE_STYLE_NAMES.includes(userZoneStyle.name as (typeof USER_ZONE_STYLE_NAMES)[number]);
 
-  const applyWorkingIndicator = (tone: 'green' | 'yellow' | 'red') => {
-    const activeThemeTone = tone === 'green' ? 'success' : tone === 'yellow' ? 'warning' : 'error';
-    try {
-      ctx.ui.setWorkingIndicator({
-        frames: WORKING_INDICATOR_FRAMES.map((frame) => ctx.ui.theme.fg(activeThemeTone, frame)),
-        intervalMs: 120,
-      });
-    } catch {
-      // ctx may be stale after session replacement or reload — silently ignore
-    }
-  };
+	if (useBoxEditor && config.footer) {
+		// Hides pi's default footer and exposes token-usage/status lines
+		// to the editor's user zone instead.
+		installFooterStatsPatch();
+	}
 
-  const updateWorkingIndicatorTone = () => {
-    // 定时器已停止（session 结束时由 agent_end 清理）→ 跳过
-    if (!workingIndicatorTimer) return;
-    const elapsed = Date.now() - lastTokenTime;
-    const nextTone = elapsed < 10_000 ? 'green' : elapsed < 30_000 ? 'yellow' : 'red';
-    if (nextTone === currentWorkingTone) return;
-    currentWorkingTone = nextTone;
-    applyWorkingIndicator(nextTone);
-  };
+	state.fetchBranch = createGitBranchFetcher(ctx.cwd, () => state.requestRender?.());
+	state.speedTracker = createAssistantSpeedTracker();
 
-  const updateWorkingMessage = () => {
-    if (!agentStartTime) return;
-    const elapsed = Date.now() - agentStartTime;
-    const elapsedStr = formatDuration(elapsed);
-    try {
-      ctx.ui.setWorkingMessage(`Working...   ${STATUS_ICONS.clock} ${elapsedStr}`);
-    } catch {
-    }
-  };
+	state.loader = createMergedWorkingLoader(ctx.ui, {
+		messages: config.customWorkingMessage,
+		onToneChange: () => state.requestRender?.(),
+	});
+	state.loader.configure();
 
-  const startWorkingTimer = () => {
-    stopWorkingTimer();
-    lastTokenTime = Date.now();
-    currentWorkingTone = undefined;
-    applyWorkingIndicator('green');
-    workingIndicatorTimer = setInterval(() => { updateWorkingIndicatorTone(); updateWorkingMessage(); }, 100);
-  };
+	ctx.ui.setHeader((tui, theme) => makeWelcomeHeader(tui, theme, true));
 
-  const stopWorkingTimer = () => {
-    clearInterval(workingIndicatorTimer);
-    workingIndicatorTimer = undefined;
-  };
+	const readThinkingLevel = (): string | undefined => {
+		try {
+			return pi.getThinkingLevel();
+		} catch (error) {
+			if (isStaleContextError(error)) return undefined;
+			throw error;
+		}
+	};
+	let currentThinkingLevel = readThinkingLevel();
 
-  ctx.ui.setHeader((tui, theme) => makeWelcomeHeader(tui, theme, event?.reason === "startup"));
-  ctx.ui.setEditorComponent((tui, theme, keybindings) => new CustomEditor(tui, theme, keybindings));
+	const readContextUsage = () => {
+		try {
+			return ctx.getContextUsage();
+		} catch (error) {
+			if (isStaleContextError(error)) return undefined;
+			throw error;
+		}
+	};
 
-  ctx.ui.setFooter((tui, theme, footerData) => ({
-    dispose: footerData.onBranchChange(() => tui.requestRender()),
-    render(width: number) {
-      rerenderFooter = () => tui.requestRender();
-      const usage = collectUsage(ctx);
-      const coreSections = buildCoreFooterSections(theme, footerData, ctx, pi, usage);
-      const lines = [renderCoreFooterLine(width, theme, coreSections)];
-      const extensionLine = renderExtensionStatusLine(width, theme, footerData);
+	const readModelInfo = () => {
+		try {
+			const model = ctx.model;
+			return model
+				? {
+					provider: model.provider,
+					id: model.id,
+					name: (model as typeof model & { name?: string }).name,
+					reasoning: model.reasoning,
+					thinkingLevel: currentThinkingLevel,
+				}
+				: undefined;
+		} catch (error) {
+			if (isStaleContextError(error)) return undefined;
+			throw error;
+		}
+	};
 
-      if (extensionLine) {
-        lines.push(extensionLine);
-      }
+	if (useBoxEditor) {
+		ctx.ui.setEditorComponent((tui, theme, kb) => {
+			const uiTheme = (ctx.ui.theme ?? theme) as any;
+			state.requestRender = () => tui.requestRender();
+			return new BoxEditor(
+				tui,
+				theme as any,
+				kb,
+				uiTheme,
+				ctx.cwd,
+				readContextUsage,
+				readModelInfo,
+				() => state.fetchBranch?.() ?? null,
+				() => state.speedTracker?.getWordsPerSecond() ?? null,
+				() => getFooterStatusLine(),
+				() => "footer",
+				userZoneStyle,
+				config.inputBox.style,
+				() => getFooterTokenUsageLine(),
+			);
+		});
+	} else {
+		ctx.ui.setEditorComponent((tui, theme, keybindings) => new CustomEditor(tui, theme as any, keybindings as any));
+	}
 
-      return lines;
-    },
-    invalidate() { },
-  }));
+	const runningToolCalls = new Set<string>();
 
-  // Defer initial indicator so SDK's resetExtensionUI() (which calls
-  // setWorkingIndicator() with no args) has already run before we override.
-  setTimeout(() => applyWorkingIndicator('green'), 0);
+	pi.on("before_agent_start", async () => {
+		state.loader?.setState("working");
+	});
 
-  // agent_start = 用户发消息、agent 开始处理 → 启动计时
-  pi.on('agent_start', async () => {
-    agentStartTime = Date.now();
-    currentRequestInput = 0;
-    currentRequestOutput = 0;
-    startWorkingTimer();
-    rerenderFooter?.();
-  });
+	pi.on("agent_start", async () => {
+		runningToolCalls.clear();
+		state.loader?.start("working");
+		state.requestRender?.();
+	});
 
-  // message_update = token 到达 → 更新时间戳，提取实时 token 用量
-  pi.on('message_update', async (event: any) => {
-    lastTokenTime = Date.now();
-    // Extract token usage from the streaming event's partial message,
-    // falling back to the agent message (some APIs report usage on the message itself)
-    const partial = event?.assistantMessageEvent?.partial;
-    if (partial?.usage?.input > 0 || partial?.usage?.output > 0) {
-      currentRequestInput = partial.usage.input;
-      currentRequestOutput = partial.usage.output;
-    } else if (event?.message?.usage?.input > 0 || event?.message?.usage?.output > 0) {
-      currentRequestInput = event.message.usage.input;
-      currentRequestOutput = event.message.usage.output;
-    }
-  });
+	pi.on("message_start", async (event) => {
+		state.loader?.touch();
+		state.speedTracker?.handleMessageStart(event.message);
+		if (event.message.role === "assistant" && runningToolCalls.size === 0) {
+			state.loader?.setState(workingStateForAssistantMessage(event.message));
+		}
+	});
 
-  // agent_end = agent 处理完毕（streaming 结束）→ 停止计时
-  pi.on('agent_end', async () => {
-    stopWorkingTimer();
-    agentStartTime = 0;
-    // Clear working message back to default after a short delay
-    setTimeout(() => { try { ctx.ui.setWorkingMessage(); } catch { /* ignore */ } }, 2000);
-    rerenderFooter?.();
-  });
+	pi.on("message_update", async (event) => {
+		state.loader?.touch();
+		state.speedTracker?.handleMessageUpdate(event.message);
+		if (event.message.role === "assistant" && runningToolCalls.size === 0) {
+			state.loader?.setState(workingStateForAssistantMessage(event.message));
+		}
+	});
 
-  pi.on('thinking_level_select', async () => {
-    rerenderFooter?.();
-  });
+	pi.on("message_end", async (event) => {
+		state.speedTracker?.handleMessageEnd(event.message);
+	});
+
+	pi.on("tool_execution_start", async (event) => {
+		runningToolCalls.add(event.toolCallId);
+		state.loader?.setState("running");
+	});
+
+	pi.on("tool_execution_end", async (event) => {
+		runningToolCalls.delete(event.toolCallId);
+		// Keep the current label until the next live state begins.
+	});
+
+	pi.on("agent_end", async () => {
+		runningToolCalls.clear();
+		state.loader?.stop();
+		// Reset the working message to default shortly after the run ends.
+		setTimeout(() => {
+			if (session === state && !state.stale) {
+				try {
+					ctx.ui.setWorkingMessage();
+				} catch {
+					// ctx may be stale after session replacement — ignore
+				}
+			}
+		}, 2000);
+		state.requestRender?.();
+	});
+
+	pi.on("thinking_level_select", async (event) => {
+		currentThinkingLevel = event.level;
+		state.requestRender?.();
+	});
 }

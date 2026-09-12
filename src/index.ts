@@ -1,13 +1,12 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { registerMessageRenderer, setupCustomUI, clearWorkingIndicatorTimer } from "./ui.ts";
+import { setupSessionUI, teardownSessionUI } from "./ui.ts";
 
 export default function (pi: ExtensionAPI) {
-  registerMessageRenderer(pi);
-  pi.on('session_start', async (event, ctx) => {
-    setupCustomUI(pi, ctx, event);
-  });
+	pi.on("session_start", async (_event, ctx) => {
+		await setupSessionUI(pi, ctx);
+	});
 
-  pi.on('session_shutdown', async () => {
-    clearWorkingIndicatorTimer();
-  });
+	pi.on("session_shutdown", async () => {
+		teardownSessionUI();
+	});
 }

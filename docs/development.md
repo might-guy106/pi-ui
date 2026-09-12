@@ -10,6 +10,31 @@ git config user.name "Pankaj Nath"
 pi install ./
 ```
 
+## Tests and Checks
+
+```bash
+npm run typecheck   # tsc --noEmit against the installed pi packages
+npm run lint        # eslint
+npm test            # smoke tests: config/loader + user-zone rendering
+```
+
+The smoke tests run the real TypeScript sources with Node type stripping
+(`--experimental-transform-types`) and assert on the actual rendered output of
+the editor zone for every style and input frame.
+
+## Pi version
+
+Dev dependencies track the installed pi runtime (currently 0.85.x). If npm
+resolves `@earendil-works/*` against the org artifactory registry and fails,
+install with the public registry:
+
+```bash
+npm install -D --registry=https://registry.npmjs.org \
+  @earendil-works/pi-coding-agent@<version> \
+  @earendil-works/pi-tui@<version> \
+  @earendil-works/pi-ai@<version>
+```
+
 ## Publishing a New Version
 
 ```bash

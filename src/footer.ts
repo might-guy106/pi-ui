@@ -65,10 +65,6 @@ function getCwdLabel(cwd?: string): string {
   return base || cwd;
 }
 
-function getUsageLabel(_usage: UsageTotals): string {
-  return '';
-}
-
 function getCostLabel(cost: number): string {
   return cost > 0 ? cost.toFixed(4) : '-';
 }

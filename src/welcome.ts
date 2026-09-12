@@ -6,7 +6,7 @@
  * Prompts, Extensions) laid out in a responsive grid.
  *
  * HOW IT PLUGS IN:
- *   ui.ts calls `ctx.ui.setHeader(makeWelcomeHeader)` inside setupCustomUI().
+ *   ui.ts calls `ctx.ui.setHeader(makeWelcomeHeader)` inside setupSessionUI().
  *   setHeader receives a factory (tui, theme) → Component, called once per
  *   session_start. WelcomeHeader implements the Component interface (render /
  *   invalidate / dispose) so pi's TUI lifecycle manages it automatically.

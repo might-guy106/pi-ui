@@ -26,7 +26,10 @@ export default tseslint.config(
           varsIgnorePattern: "^_",
           caughtErrorsIgnorePattern: "^_"
         }
-      ]
+      ],
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-control-regex": "off"
     }
   }
 );
