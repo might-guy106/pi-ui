@@ -226,8 +226,8 @@ const defaultCliDock = renderStyle("cli-dock", { footerProvider: cliDockFooter }
 check("cli-dock default: no prompt glyph", !defaultCliDock.some((l) => l.includes("›")), defaultCliDock.join("\n"));
 check("cli-dock default: keeps status row", defaultCliDock[3]?.includes("Deepseek V4 Flash"), defaultCliDock.join("\n"));
 
-// --- mouse click-to-position mapping ---
-const mouseTui = { terminal: { rows: 32, columns: 100 }, hardwareCursorRow: 0, previousViewportTop: 0, requestRender() {} };
+// --- mouse click-to-position (coordinate translation into the base editor) ---
+const mouseTui = { terminal: { rows: 32, columns: 100 }, requestRender() {} };
 const mouseEditor = new BoxEditor(
 	mouseTui,
 	makeTheme(),
@@ -245,18 +245,20 @@ const mouseEditor = new BoxEditor(
 );
 mouseEditor.setText("hello world");
 mouseEditor.render(88);
-const originRow = mouseTui.hardwareCursorRow - mouseEditor.lastCursorMarkerRow;
-const firstInputRow = originRow + mouseEditor.lastInputStart;
+const click = (x, y) => mouseEditor.handleMouse({
+	type: "click", button: "left", x, y, width: 88,
+	screenX: x, screenY: y, shift: false, alt: false, ctrl: false,
+});
 // Click 2 columns into the text area ("he|llo world") → cursor col 2
-mouseEditor.handleScreenClick(mouseEditor.lastInputInset + 2, firstInputRow);
-const afterClick = (mouseEditor).getCursor();
+click(mouseEditor.lastInputInset + 2, mouseEditor.lastInputStart);
+const afterClick = mouseEditor.getCursor();
 check("mouse click maps to cursor column", afterClick.line === 0 && afterClick.col === 2, JSON.stringify(afterClick));
 // Click far right beyond text → cursor at end of "hello world" (11)
-mouseEditor.handleScreenClick(mouseEditor.lastInputInset + 50, firstInputRow);
+click(mouseEditor.lastInputInset + 50, mouseEditor.lastInputStart);
 const afterFar = mouseEditor.getCursor();
 check("mouse click past text clamps to end", afterFar.line === 0 && afterFar.col === 11, JSON.stringify(afterFar));
 // Click a non-input row (status row) → cursor unchanged
-mouseEditor.handleScreenClick(10, firstInputRow - 1);
+click(10, mouseEditor.lastInputStart - 1);
 check("mouse click outside input ignored", mouseEditor.getCursor().col === 11);
 
 rmSync(tempHome, { recursive: true, force: true });

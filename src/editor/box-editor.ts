@@ -2,7 +2,7 @@ import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import { CURSOR_MARKER } from "@earendil-works/pi-tui";
 import { homedir, hostname, userInfo } from "node:os";
 
-import { safeWrapTextWithAnsi, safeTruncateToWidth, safeVisibleWidth } from "../render-budget.ts";
+import { safeTruncateToWidth, safeVisibleWidth } from "../render-budget.ts";
 import { fgHex, stripAnsi } from "../theme/ansi.ts";
 import { getThemeExtra } from "../theme/theme-extras.ts";
 import { resolveUserZoneStyle, type UserZoneStyle } from "./user-zone.ts";
@@ -170,15 +170,11 @@ export class BoxEditor extends CustomEditor {
 		super(tui, editorTheme, kb);
 	}
 
-	// --- mouse click support (see handleScreenClick) ---
+	// --- mouse click support (see handleMouse) ---
 	// Row index (within our rendered output) of the first input content row.
 	private lastInputStart = 0;
 	// Columns before the editable text area within an input row (padding, frame, prompt).
 	private lastInputInset = 0;
-	// Row of our rendered output that currently carries the CURSOR_MARKER.
-	private lastCursorMarkerRow = 0;
-	// Wrap map of the drawn input rows: which logical line and start column each row shows.
-	private lastContentRows: Array<{ logicalLine: number; startCol: number; width: number }> = [];
 
 	private color(hex: string, text: string): string {
 		return this.fullTheme ? fgHex(this.fullTheme, hex, text) : text;
@@ -576,52 +572,40 @@ export class BoxEditor extends CustomEditor {
 		return this.pad(`${trimmedMain}${gap}${right}`, width);
 	}
 
-	private renderInputContentLines(text: string, width: number): string[] {
-		const logicalLines = text.length > 0 ? text.split("\n") : [""];
-		const cursor = this.getCursor();
-		const cursorLine = clamp(cursor.line, 0, logicalLines.length - 1);
+	/**
+	 * Draw the text rows from the base editor's own layout (same word-wrap,
+	 * same scroll slice) so what you see is exactly what its cursor model
+	 * tracks — and so handleMouse coordinate translation stays exact.
+	 */
+	private renderInputContentLines(): string[] {
+		const baseAny = this as any;
+		const layoutWidth = typeof baseAny.lastWidth === "number" ? baseAny.lastWidth : 1;
+		const allLines: Array<{ text: string; hasCursor?: boolean; cursorPos?: number }> =
+			typeof baseAny.layoutText === "function" ? baseAny.layoutText(layoutWidth) : [];
+		const scroll = typeof baseAny.scrollOffset === "number" ? baseAny.scrollOffset : 0;
+		const visibleCount = typeof baseAny.renderedVisibleLineCount === "number" && baseAny.renderedVisibleLineCount > 0
+			? baseAny.renderedVisibleLineCount
+			: allLines.length;
+		const visible = allLines.slice(scroll, scroll + visibleCount);
+
 		const rendered: string[] = [];
-		const contentRows: Array<{ logicalLine: number; startCol: number; width: number }> = [];
-		let markerRow = -1;
-
-		for (let i = 0; i < logicalLines.length; i++) {
-			const rawLine = logicalLines[i] ?? "";
-			const isCursorLine = i === cursorLine;
-			let line = rawLine;
-
-			if (isCursorLine) {
-				const displayCursorCol = clamp(cursor.col, 0, rawLine.length);
-				const before = rawLine.slice(0, displayCursorCol);
-				const after = rawLine.slice(displayCursorCol);
-				const cursorGlyph = firstCodePoint(after);
-				const atCursor = cursorGlyph || " ";
-				const rest = cursorGlyph ? after.slice(cursorGlyph.length) : after;
-				const marker = this.focused ? CURSOR_MARKER : "";
-				line = `${before}${marker}\x1b[7m${atCursor}\x1b[27m${rest}`;
+		for (const layoutLine of visible) {
+			const lineText = layoutLine?.text ?? "";
+			if (!layoutLine?.hasCursor) {
+				rendered.push(lineText);
+				continue;
 			}
-
-			const wrapped = safeWrapTextWithAnsi(line, width);
-			const rows = wrapped.length > 0 ? wrapped : [""];
-			let startCol = 0;
-			for (const row of rows) {
-				const rowWidth = safeVisibleWidth(row);
-				contentRows.push({ logicalLine: i, startCol, width: rowWidth });
-				if (markerRow === -1 && row.includes(CURSOR_MARKER)) markerRow = rendered.length;
-				rendered.push(row);
-				startCol += rowWidth;
-			}
+			const pos = clamp(layoutLine.cursorPos ?? 0, 0, lineText.length);
+			const before = lineText.slice(0, pos);
+			const after = lineText.slice(pos);
+			const cursorGlyph = firstCodePoint(after);
+			const atCursor = cursorGlyph || " ";
+			const rest = cursorGlyph ? after.slice(cursorGlyph.length) : after;
+			const marker = this.focused ? CURSOR_MARKER : "";
+			rendered.push(`${before}${marker}\x1b[7m${atCursor}\x1b[27m${rest}`);
 		}
 
-		if (rendered.length === 0) {
-			const emptyRow = `${this.focused ? CURSOR_MARKER : ""}\x1b[7m \x1b[27m`;
-			contentRows.push({ logicalLine: cursorLine, startCol: 0, width: 1 });
-			if (this.focused) markerRow = 0;
-			rendered.push(emptyRow);
-		}
-
-		this.lastContentRows = contentRows;
-		if (markerRow >= 0) this.lastCursorMarkerRow = markerRow;
-		return rendered;
+		return rendered.length > 0 ? rendered : [this.focused ? `${CURSOR_MARKER}\x1b[7m \x1b[27m` : "\x1b[7m \x1b[27m"];
 	}
 
 	private formatRuntimeParts(showTokenLabel = true): string[] {
@@ -1144,7 +1128,7 @@ export class BoxEditor extends CustomEditor {
 
 		const bottomBorderIndex = findLastBorderIndex(parentLines);
 		const autocompleteLines = bottomBorderIndex >= 0 ? parentLines.slice(bottomBorderIndex + 1) : [];
-		const displayLines = this.renderInputContentLines(text, contentWidth);
+		const displayLines = this.renderInputContentLines();
 		if (editorStyle.placeholder && text.length === 0 && displayLines[0] !== undefined) {
 			const placeholder = this.tone("dim", editorStyle.placeholder);
 			const available = Math.max(0, contentWidth - safeVisibleWidth(displayLines[0]));
@@ -1182,53 +1166,16 @@ export class BoxEditor extends CustomEditor {
 	}
 
 	/**
-	 * Position the text cursor from a terminal mouse click. The click handler
-	 * in ui.ts parses SGR mouse sequences and converts screen coordinates:
-	 * screenY → our local row via the hardware-cursor anchor, screenX → text
-	 * column via the input inset. Clicks outside the input area are ignored.
+	 * Translate mouse clicks from our extended render space (style rows above
+	 * the text, prompt/padding inset) into the base editor's coordinate space,
+	 * then let pi-tui's built-in click-to-cursor logic do the work.
 	 */
-	handleScreenClick(screenX: number, screenY: number): void {
-		const tuiAny = this.tui as any;
-		const viewportTop = typeof tuiAny?.previousViewportTop === "number" ? tuiAny.previousViewportTop : 0;
-		const clickDocRow = viewportTop + screenY;
-		const markerDocRow = typeof tuiAny?.hardwareCursorRow === "number" ? tuiAny.hardwareCursorRow : this.lastCursorMarkerRow;
-		const originDocRow = markerDocRow - this.lastCursorMarkerRow;
-		const contentIndex = clickDocRow - originDocRow - this.lastInputStart;
-		const rec = this.lastContentRows[contentIndex];
-		if (!rec) return;
-
-		const targetColumn = Math.max(0, Math.min(screenX - this.lastInputInset, rec.width));
-		const logicalLine = (this as any).state?.lines?.[rec.logicalLine] ?? "";
-		const slice = logicalLine.slice(rec.startCol);
-		const segmenter = typeof Intl !== "undefined" && typeof (Intl as any).Segmenter === "function"
-			? new (Intl as any).Segmenter(undefined, { granularity: "grapheme" })
-			: undefined;
-		let visible = 0;
-		let index = slice.length;
-		if (segmenter) {
-			for (const part of segmenter.segment(slice)) {
-				const width = safeVisibleWidth(part.segment);
-				if (targetColumn < visible + width) {
-					index = part.index;
-					break;
-				}
-				visible += width;
-			}
-		} else {
-			index = Math.min(targetColumn, slice.length);
+	handleMouse(event: any): any {
+		if (event.type !== "click" || event.button !== "left") return undefined;
+		const contentIndex = event.y - this.lastInputStart;
+		if (contentIndex < 0 || contentIndex >= (this as any).renderedVisibleLineCount) {
+			return { handled: true, focus: true };
 		}
-
-		const state = (this as any).state;
-		if (!state) return;
-		state.cursorLine = rec.logicalLine;
-		if (typeof (this as any).setCursorCol === "function") {
-			(this as any).setCursorCol(rec.startCol + index);
-		} else {
-			state.cursorCol = rec.startCol + index;
-		}
-		(this as any).lastAction = null;
-		if (typeof (this as any).exitHistoryBrowsing === "function") (this as any).exitHistoryBrowsing();
-		if ((this as any).autocompleteState && typeof (this as any).updateAutocomplete === "function") (this as any).updateAutocomplete();
-		this.tui?.requestRender?.();
+		return super.handleMouse({ ...event, y: contentIndex + 1, x: event.x - this.lastInputInset });
 	}
 }

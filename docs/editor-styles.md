@@ -84,7 +84,7 @@ Under `NO_COLOR`, `auto` resolves to `line` (the background-based frames are inv
 
 ## Mouse
 
-With `editorMouse: true` (default), clicking anywhere inside the input area moves the text cursor there — including wrapped and multi-line input. Terminals do text selection with **Shift+drag** while mouse reporting is on.
+Clicking inside the input area moves the text cursor (works in pi's fullscreen mode, where the TUI dispatches mouse events; pi-ui translates them onto its extended layout).
 
 ## Data shown in the zone
 
