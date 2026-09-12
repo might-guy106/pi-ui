@@ -80,6 +80,8 @@ const userLines = userComponent.render(80).map(stripAnsi).join("\n");
 check("no user prefix by default", !userLines.includes("❯"), userLines);
 check("no divider around user message by default", !userLines.includes("───"), userLines);
 check("user text preserved", userLines.includes("please fix the footer"));
+const userTextLine = userLines.split("\n").find((l) => l.includes("please fix the footer"));
+check("user message padded inside its row", Boolean(userTextLine && userTextLine.startsWith("  ")), JSON.stringify(userTextLine));
 
 // enable prefix + dividers via config and re-render
 const { configPath } = await import("../src/config.ts");

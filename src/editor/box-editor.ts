@@ -6,7 +6,7 @@ import { safeWrapTextWithAnsi, safeTruncateToWidth, safeVisibleWidth } from "../
 import { fgHex, stripAnsi } from "../theme/ansi.ts";
 import { getThemeExtra } from "../theme/theme-extras.ts";
 import { resolveUserZoneStyle, type UserZoneStyle } from "./user-zone.ts";
-import type { InputBoxStyle } from "../config.ts";
+import { loadConfig, type InputBoxStyle } from "../config.ts";
 
 /** Outline border plus the prompt gap, so the cli-dock status row lines up with the input text. */
 const CLI_DOCK_STATUS_INSET = 2;
@@ -1072,7 +1072,8 @@ export class BoxEditor extends CustomEditor {
 		if (this.userZoneStyle.editor.showDivider) lines.push(this.renderGeminiDivider(width));
 		if (this.userZoneStyle.editor.showRuntimeRow) lines.push(this.renderPanelLine(this.renderGeminiStatusRow(contentInnerWidth), width));
 		lines.push(...this.renderInputBoxFrame(inputLines, width));
-		lines.push(...this.renderGeminiFooter(width, contentInnerWidth));
+		// Footer line (cwd + token usage) is off by default.
+		if (loadConfig().editorFooter) lines.push(...this.renderGeminiFooter(width, contentInnerWidth));
 		return this.appendAutocomplete(lines, autocompleteLines, width);
 	}
 
@@ -1091,14 +1092,21 @@ export class BoxEditor extends CustomEditor {
 		const editorStyle = this.userZoneStyle.editor;
 		const contentInnerWidth = this.panelContentWidth(width);
 		const text = this.getText();
-		const promptColor = editorStyle.prompt === "❯"
-			? this.themeExtraColor("userPrefixColor", editorStyle.promptColor)
-			: editorStyle.layout === "cli-dock"
-				? editorStyle.promptColor
-				: this.themeExtraColor("bashPromptColor", editorStyle.promptColor);
-		const promptText = this.styleFg(promptColor, editorStyle.prompt);
-		const prompt = editorStyle.promptBold ? this.bold(promptText) : promptText;
-		const promptPrefix = `${editorStyle.layout === "cli-dock" ? " " : ""}${prompt}${" ".repeat(Math.max(0, editorStyle.promptGap))}`;
+		const editorConfig = loadConfig();
+		// Prompt glyph (❯/›) is off by default; keep a small indent so text
+		// doesn't sit on the panel edge (cli-dock keeps 1 col inside its box).
+		const promptPrefix = editorConfig.editorPrompt
+			? (() => {
+				const promptColor = editorStyle.prompt === "❯"
+					? this.themeExtraColor("userPrefixColor", editorStyle.promptColor)
+					: editorStyle.layout === "cli-dock"
+						? editorStyle.promptColor
+						: this.themeExtraColor("bashPromptColor", editorStyle.promptColor);
+				const promptText = this.styleFg(promptColor, editorStyle.prompt);
+				const prompt = editorStyle.promptBold ? this.bold(promptText) : promptText;
+				return `${editorStyle.layout === "cli-dock" ? " " : ""}${prompt}${" ".repeat(Math.max(0, editorStyle.promptGap))}`;
+			})()
+			: editorStyle.layout === "cli-dock" ? " " : "  ";
 		const prefixWidth = safeVisibleWidth(promptPrefix);
 		const inputInnerWidth = Math.max(1, contentInnerWidth - (editorStyle.layout === "cli-dock" ? 2 : 0));
 		const contentWidth = Math.max(1, inputInnerWidth - prefixWidth);

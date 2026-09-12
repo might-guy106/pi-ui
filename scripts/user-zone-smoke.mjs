@@ -23,6 +23,10 @@ function stripAnsi(text) {
 const tempHome = mkdtempSync(join(tmpdir(), "pi-ui-zone-smoke-"));
 process.env.HOME = tempHome;
 process.env.USERPROFILE = tempHome;
+// Most assertions below describe the classic look: prompt glyph + footer line ON.
+// (Both default off; the end of this file covers the default-off rendering.)
+mkdirSync(join(tempHome, ".pi", "agent"), { recursive: true });
+writeFileSync(join(tempHome, ".pi", "agent", "pi-ui.json"), JSON.stringify({ userZoneStyle: "gemini", editorPrompt: true, editorFooter: true }));
 
 const { USER_ZONE_STYLE_NAMES, resolveUserZoneStyle } = await import("../src/editor/user-zone.ts");
 const { setFullTheme } = await import("../src/theme/theme-extras.ts");
@@ -205,6 +209,19 @@ const directGeminiCluster = renderFixedUserZoneCluster(
 );
 check("cluster hint moved out of input row", !stripAnsi(directGeminiCluster.lines[0] ?? "").includes("^Alt"));
 check("cluster hint appended to footer", stripAnsi(directGeminiCluster.lines[1] ?? "").trimEnd().endsWith("ready  [^Alt T TOP]"));
+
+rmSync(join(tempHome, ".pi", "agent", "pi-ui.json"), { force: true });
+writeFileSync(join(tempHome, ".pi", "agent", "pi-ui.json"), JSON.stringify({ userZoneStyle: "gemini" }));
+await new Promise((resolve) => setTimeout(resolve, 1100));
+const defaultGemini = renderStyle("gemini");
+check("gemini default: no prompt glyph", !defaultGemini.some((l) => l.includes("❯")), defaultGemini.join("\n"));
+check("gemini default: no footer row", defaultGemini.length === 5, String(defaultGemini.length));
+check("gemini default: input text still renders", defaultGemini[3]?.includes("hello"), defaultGemini.join("\n"));
+const defaultNvim = renderStyle("nvim");
+check("nvim default: no prompt glyph", !defaultNvim.some((l) => l.includes("❯")), defaultNvim.join("\n"));
+const defaultCliDock = renderStyle("cli-dock", { footerProvider: cliDockFooter });
+check("cli-dock default: no prompt glyph", !defaultCliDock.some((l) => l.includes("›")), defaultCliDock.join("\n"));
+check("cli-dock default: keeps status row", defaultCliDock[3]?.includes("Deepseek V4 Flash"), defaultCliDock.join("\n"));
 
 rmSync(tempHome, { recursive: true, force: true });
 

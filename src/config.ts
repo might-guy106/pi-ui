@@ -26,6 +26,8 @@ export interface PiUiConfig {
 	userPrefix: boolean;
 	userDivider: boolean;
 	assistantDivider: boolean;
+	editorPrompt: boolean;
+	editorFooter: boolean;
 	footer: boolean;
 	forceOSC11: boolean;
 }
@@ -51,6 +53,8 @@ const DEFAULTS: PiUiConfig = {
 	userPrefix: false,
 	userDivider: false,
 	assistantDivider: false,
+	editorPrompt: false,
+	editorFooter: false,
 	footer: true,
 	forceOSC11: false,
 };
@@ -130,6 +134,8 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 		userPrefix: booleanOrDefault(config.userPrefix, DEFAULTS.userPrefix),
 		userDivider: booleanOrDefault(config.userDivider, DEFAULTS.userDivider),
 		assistantDivider: booleanOrDefault(config.assistantDivider, DEFAULTS.assistantDivider),
+		editorPrompt: booleanOrDefault(config.editorPrompt, DEFAULTS.editorPrompt),
+		editorFooter: booleanOrDefault(config.editorFooter, DEFAULTS.editorFooter),
 		footer: booleanOrDefault(config.footer, DEFAULTS.footer),
 		forceOSC11: booleanOrDefault(config.forceOSC11, DEFAULTS.forceOSC11),
 	};

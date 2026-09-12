@@ -37,6 +37,8 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `userPrefix` | `true`, `false` | `false` | Show a `❯` prefix on user messages (with `┆` rails on wrapped lines). |
 | `userDivider` | `true`, `false` | `false` | Draw a full-width divider line above each user message. |
 | `assistantDivider` | `true`, `false` | `false` | Draw a full-width divider line above each assistant message. |
+| `editorPrompt` | `true`, `false` | `false` | Show the `❯`/`›` glyph at the start of the input line. When off, the input keeps a small indent instead. |
+| `editorFooter` | `true`, `false` | `false` | Show the editor footer line below the input (cwd left, last reply's token usage `[↑in ↓out R… CH…%]` right) in the `gemini` style. |
 
 | `forceOSC11` | `true`, `false` | `false` | Force the terminal background sync (OSC 11) on Windows/WSL, where it is skipped by default. See [startup](./startup.md). |
 

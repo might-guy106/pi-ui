@@ -119,8 +119,20 @@ export function installUserMessagePrefix(theme: any): void {
 			output[targetIndex] = `${prefixSegment}${remainder}`;
 			alignContinuationLines(output, targetIndex);
 		} else {
-			// No prefix: keep pi's stock padding and emphasis, no ┆ rails.
-			output[targetIndex] = stripEmphasisAnsi(presentationLine);
+			// No prefix: pad the message inside its background row so the text
+			// doesn't sit on the terminal edge.
+			const padSegment = design.stripsBackground
+				? "  "
+				: typeof activeTheme?.bg === "function"
+					? activeTheme.bg("userMessageBg", "  ")
+					: "  ";
+			const padLine = (raw: string) => `${padSegment}${stripEmphasisAnsi(dropLeadingColumns(raw, 1))}`;
+			output[targetIndex] = padLine(presentationLine);
+			for (let i = targetIndex + 1; i < output.length; i++) {
+				const continuation = output[i] ?? "";
+				if (stripAnsi(continuation).trim().length === 0) continue;
+				output[i] = padLine(continuation);
+			}
 		}
 
 		const result = output.map((renderedLine) => {

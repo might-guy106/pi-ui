@@ -17,7 +17,7 @@ A one-line divider above, one status row, half-block framed input, one-line foot
 
 - Status row: compact `provider model · level` on the left; token meter, context %, git branch with `+/-` LOC on the right.
 - Input frame: `▄` bar above and `▀` bar below, rows on the theme's selected background.
-- Footer: cwd on the left; token usage (`[↑in ↓out Rcache CH%]`) and extension status right-aligned.
+- Optional footer (`"editorFooter": true`): cwd on the left; token usage (`[↑in ↓out Rcache CH%]`) right-aligned. Off by default.
 
 ## `droid`
 
@@ -62,6 +62,10 @@ A Neovim-style dock: lined input with an optional branch label in the top rule, 
 
 - Top rule embeds `⎇ branch +N -M` (unbracketed LOC, gitsigns-style). It degrades by width: full label → name only → plain rule.
 - Statusline: left ` THINK ` (reverse-video badge showing the thinking level or `BASH` mode) plus `provider · model`; right side shows `tokens/window ctx% · CH cache-hit%` and the extension status, degrading provider → CH% → tokens → ctx% as width shrinks.
+
+## Prompt glyph
+
+The `❯`/`›` glyph at the start of the input line is **off by default** (`"editorPrompt": false`); the input keeps a small indent instead. Enable it with `"editorPrompt": true` in [config](./configuration.md).
 
 ## Input frames
 
