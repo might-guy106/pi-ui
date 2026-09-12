@@ -26,7 +26,7 @@ process.env.USERPROFILE = tempHome;
 // Most assertions below describe the classic look: prompt glyph + footer line ON.
 // (Both default off; the end of this file covers the default-off rendering.)
 mkdirSync(join(tempHome, ".pi", "agent"), { recursive: true });
-writeFileSync(join(tempHome, ".pi", "agent", "pi-ui.json"), JSON.stringify({ userZoneStyle: "gemini", editorPrompt: true, editorFooter: true }));
+writeFileSync(join(tempHome, ".pi", "agent", "pi-ui.json"), JSON.stringify({ userZoneStyle: "gemini", editorPrompt: true, editorFooter: true, showProvider: true }));
 
 const { USER_ZONE_STYLE_NAMES, resolveUserZoneStyle } = await import("../src/editor/user-zone.ts");
 const { setFullTheme } = await import("../src/theme/theme-extras.ts");
@@ -217,11 +217,47 @@ const defaultGemini = renderStyle("gemini");
 check("gemini default: no prompt glyph", !defaultGemini.some((l) => l.includes("❯")), defaultGemini.join("\n"));
 check("gemini default: no footer row", defaultGemini.length === 5, String(defaultGemini.length));
 check("gemini default: input text still renders", defaultGemini[3]?.includes("hello"), defaultGemini.join("\n"));
+check("gemini default: provider hidden", !defaultGemini.some((l) => l.includes("openai")) && defaultGemini.some((l) => l.includes("gpt-test")), defaultGemini.join("\n"));
+const defaultDroid = renderStyle("droid");
+check("droid default: provider badge hidden", !defaultDroid.some((l) => l.includes("[OPENAI]")) && defaultDroid.some((l) => l.includes("gpt-test")), defaultDroid.join("\n"));
 const defaultNvim = renderStyle("nvim");
 check("nvim default: no prompt glyph", !defaultNvim.some((l) => l.includes("❯")), defaultNvim.join("\n"));
 const defaultCliDock = renderStyle("cli-dock", { footerProvider: cliDockFooter });
 check("cli-dock default: no prompt glyph", !defaultCliDock.some((l) => l.includes("›")), defaultCliDock.join("\n"));
 check("cli-dock default: keeps status row", defaultCliDock[3]?.includes("Deepseek V4 Flash"), defaultCliDock.join("\n"));
+
+// --- mouse click-to-position mapping ---
+const mouseTui = { terminal: { rows: 32, columns: 100 }, hardwareCursorRow: 0, previousViewportTop: 0, requestRender() {} };
+const mouseEditor = new BoxEditor(
+	mouseTui,
+	makeTheme(),
+	keybindings,
+	makeTheme(),
+	join(tempHome, "mouse-project"),
+	usage,
+	model,
+	branch,
+	speed,
+	footer,
+	() => "footer",
+	resolveUserZoneStyle("gemini"),
+	undefined,
+);
+mouseEditor.setText("hello world");
+mouseEditor.render(88);
+const originRow = mouseTui.hardwareCursorRow - mouseEditor.lastCursorMarkerRow;
+const firstInputRow = originRow + mouseEditor.lastInputStart;
+// Click 2 columns into the text area ("he|llo world") → cursor col 2
+mouseEditor.handleScreenClick(mouseEditor.lastInputInset + 2, firstInputRow);
+const afterClick = (mouseEditor).getCursor();
+check("mouse click maps to cursor column", afterClick.line === 0 && afterClick.col === 2, JSON.stringify(afterClick));
+// Click far right beyond text → cursor at end of "hello world" (11)
+mouseEditor.handleScreenClick(mouseEditor.lastInputInset + 50, firstInputRow);
+const afterFar = mouseEditor.getCursor();
+check("mouse click past text clamps to end", afterFar.line === 0 && afterFar.col === 11, JSON.stringify(afterFar));
+// Click a non-input row (status row) → cursor unchanged
+mouseEditor.handleScreenClick(10, firstInputRow - 1);
+check("mouse click outside input ignored", mouseEditor.getCursor().col === 11);
 
 rmSync(tempHome, { recursive: true, force: true });
 

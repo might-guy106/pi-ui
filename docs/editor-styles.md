@@ -82,6 +82,10 @@ The `❯`/`›` glyph at the start of the input line is **off by default** (`"ed
 
 Under `NO_COLOR`, `auto` resolves to `line` (the background-based frames are invisible without color).
 
+## Mouse
+
+With `editorMouse: true` (default), clicking anywhere inside the input area moves the text cursor there — including wrapped and multi-line input. Terminals do text selection with **Shift+drag** while mouse reporting is on.
+
 ## Data shown in the zone
 
 All values come from providers wired at session start:

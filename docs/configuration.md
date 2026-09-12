@@ -41,6 +41,8 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `editorPrompt` | `true`, `false` | `false` | Show the `❯`/`›` glyph at the start of the input line. When off, the input keeps a small indent instead. |
 | `editorFooter` | `true`, `false` | `false` | Show the editor footer line below the input (cwd left, last reply's token usage `[↑in ↓out R… CH…%]` right) in the `gemini` style. |
 
+| `showProvider` | `true`, `false` | `false` | Show the provider name next to the model in the editor status rows (`databricks-glance system.ai…`). Off by default — only the model id shows. |
+| `editorMouse` | `true`, `false` | `true` | Click anywhere in the input to position the text cursor. Enables terminal mouse reporting for the session — terminals then select text with Shift+drag instead of plain drag. Set `false` to keep stock keyboard-only cursor movement. |
 | `extraTools` | tool names array | `["grep", "find", "ls"]` | Extra coding tools to activate on top of pi's defaults (`read`, `bash`, `edit`, `write`). pi's `grep` uses **ripgrep** and `find` uses **fd** — both are used from your `PATH` if installed, auto-downloaded by pi otherwise. Set `[]` to keep pi's stock toolset. |
 | `forceOSC11` | `true`, `false` | `false` | Force the terminal background sync (OSC 11) on Windows/WSL, where it is skipped by default. See [startup](./startup.md). |
 

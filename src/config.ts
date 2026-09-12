@@ -28,6 +28,8 @@ export interface PiUiConfig {
 	assistantDivider: boolean;
 	editorPrompt: boolean;
 	editorFooter: boolean;
+	showProvider: boolean;
+	editorMouse: boolean;
 	extraTools: string[];
 	footer: boolean;
 	forceOSC11: boolean;
@@ -56,6 +58,8 @@ const DEFAULTS: PiUiConfig = {
 	assistantDivider: false,
 	editorPrompt: false,
 	editorFooter: false,
+	showProvider: false,
+	editorMouse: true,
 	extraTools: ["grep", "find", "ls"],
 	footer: true,
 	forceOSC11: false,
@@ -144,6 +148,8 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 		assistantDivider: booleanOrDefault(config.assistantDivider, DEFAULTS.assistantDivider),
 		editorPrompt: booleanOrDefault(config.editorPrompt, DEFAULTS.editorPrompt),
 		editorFooter: booleanOrDefault(config.editorFooter, DEFAULTS.editorFooter),
+		showProvider: booleanOrDefault(config.showProvider, DEFAULTS.showProvider),
+		editorMouse: booleanOrDefault(config.editorMouse, DEFAULTS.editorMouse),
 		extraTools: extraToolsOrDefault(config.extraTools),
 		footer: booleanOrDefault(config.footer, DEFAULTS.footer),
 		forceOSC11: booleanOrDefault(config.forceOSC11, DEFAULTS.forceOSC11),

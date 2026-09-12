@@ -170,6 +170,16 @@ export class BoxEditor extends CustomEditor {
 		super(tui, editorTheme, kb);
 	}
 
+	// --- mouse click support (see handleScreenClick) ---
+	// Row index (within our rendered output) of the first input content row.
+	private lastInputStart = 0;
+	// Columns before the editable text area within an input row (padding, frame, prompt).
+	private lastInputInset = 0;
+	// Row of our rendered output that currently carries the CURSOR_MARKER.
+	private lastCursorMarkerRow = 0;
+	// Wrap map of the drawn input rows: which logical line and start column each row shows.
+	private lastContentRows: Array<{ logicalLine: number; startCol: number; width: number }> = [];
+
 	private color(hex: string, text: string): string {
 		return this.fullTheme ? fgHex(this.fullTheme, hex, text) : text;
 	}
@@ -420,7 +430,7 @@ export class BoxEditor extends CustomEditor {
 	private formatModelBadge(): { plain: string; rendered: string } | null {
 		const info = this.getModelInfo?.();
 		if (!info || !info.id) return null;
-		const provider = info.provider ? `[${String(info.provider).toUpperCase()}] ` : "";
+		const provider = loadConfig().showProvider && info.provider ? `[${String(info.provider).toUpperCase()}] ` : "";
 		const level = info.reasoning && info.thinkingLevel
 			? info.thinkingLevel === "off" ? " (thinking off)" : ` (${info.thinkingLevel})`
 			: "";
@@ -435,7 +445,7 @@ export class BoxEditor extends CustomEditor {
 		const info = this.getModelInfo?.();
 		if (!info || !info.id) return null;
 
-		const provider = typeof info.provider === "string" && info.provider.trim().length > 0
+		const provider = loadConfig().showProvider && typeof info.provider === "string" && info.provider.trim().length > 0
 			? info.provider.trim().toLowerCase()
 			: "";
 		const id = String(info.id).trim();
@@ -571,6 +581,8 @@ export class BoxEditor extends CustomEditor {
 		const cursor = this.getCursor();
 		const cursorLine = clamp(cursor.line, 0, logicalLines.length - 1);
 		const rendered: string[] = [];
+		const contentRows: Array<{ logicalLine: number; startCol: number; width: number }> = [];
+		let markerRow = -1;
 
 		for (let i = 0; i < logicalLines.length; i++) {
 			const rawLine = logicalLines[i] ?? "";
@@ -589,10 +601,27 @@ export class BoxEditor extends CustomEditor {
 			}
 
 			const wrapped = safeWrapTextWithAnsi(line, width);
-			rendered.push(...(wrapped.length > 0 ? wrapped : [""]));
+			const rows = wrapped.length > 0 ? wrapped : [""];
+			let startCol = 0;
+			for (const row of rows) {
+				const rowWidth = safeVisibleWidth(row);
+				contentRows.push({ logicalLine: i, startCol, width: rowWidth });
+				if (markerRow === -1 && row.includes(CURSOR_MARKER)) markerRow = rendered.length;
+				rendered.push(row);
+				startCol += rowWidth;
+			}
 		}
 
-		return rendered.length > 0 ? rendered : [`${this.focused ? CURSOR_MARKER : ""}\x1b[7m \x1b[27m`];
+		if (rendered.length === 0) {
+			const emptyRow = `${this.focused ? CURSOR_MARKER : ""}\x1b[7m \x1b[27m`;
+			contentRows.push({ logicalLine: cursorLine, startCol: 0, width: 1 });
+			if (this.focused) markerRow = 0;
+			rendered.push(emptyRow);
+		}
+
+		this.lastContentRows = contentRows;
+		if (markerRow >= 0) this.lastCursorMarkerRow = markerRow;
+		return rendered;
 	}
 
 	private formatRuntimeParts(showTokenLabel = true): string[] {
@@ -847,7 +876,7 @@ export class BoxEditor extends CustomEditor {
 		const badgePlain = badge?.plain ?? "";
 		const badgeRendered = badge?.rendered ?? "";
 		const info = this.getModelInfo?.();
-		const provider = typeof info?.provider === "string" ? info.provider.trim().toLowerCase() : "";
+		const provider = loadConfig().showProvider && typeof info?.provider === "string" ? info.provider.trim().toLowerCase() : "";
 		const modelId = typeof info?.id === "string" ? this.truncatePlain(info.id.trim(), NVIM_MODEL_ID_MAX, "\u2026") : "";
 
 		// Breath gap: whenever the badge block and the model id are both rendered, exactly one space
@@ -1129,6 +1158,19 @@ export class BoxEditor extends CustomEditor {
 			return editorStyle.layout === "cli-dock" ? this.pad(row, inputInnerWidth) : this.renderPanelLine(row, width);
 		});
 
+		// Mouse mapping metadata: where the input rows and their text area sit.
+		const frame = this.resolveInputFrame();
+		const frameTopRows = frame === "line" || frame === "halfblock" || frame === "outline" ? 1 : 0;
+		let preRows = 0;
+		if (editorStyle.layout === "gemini") {
+			preRows = (editorStyle.showDivider ? 1 : 0) + (editorStyle.showRuntimeRow ? 1 : 0);
+		} else if (editorStyle.layout === "droid") {
+			preRows = (editorStyle.showHostBorder ? 1 : 0) + (editorStyle.showMetadataRow ? 1 : 0)
+				+ (editorStyle.showRuntimeRow ? 1 : 0) + (editorStyle.showDivider ? 1 : 0);
+		}
+		this.lastInputStart = preRows + frameTopRows;
+		this.lastInputInset = prefixWidth + editorStyle.panelPaddingX + (editorStyle.layout === "cli-dock" ? 1 : 0);
+
 		const layoutRenderers: Record<string, (inputLines: string[], autocompleteLines: string[], width: number, contentInnerWidth: number) => string[]> = {
 			"cli-dock": (il, al, w, ciw) => this.renderCliDockLayout(il, al, w, ciw),
 			"gemini": (il, al, w, ciw) => this.renderGeminiLayout(il, al, w, ciw),
@@ -1137,5 +1179,56 @@ export class BoxEditor extends CustomEditor {
 		};
 		const renderer = layoutRenderers[editorStyle.layout] ?? layoutRenderers.droid;
 		return renderer(inputLines, autocompleteLines, width, contentInnerWidth);
+	}
+
+	/**
+	 * Position the text cursor from a terminal mouse click. The click handler
+	 * in ui.ts parses SGR mouse sequences and converts screen coordinates:
+	 * screenY → our local row via the hardware-cursor anchor, screenX → text
+	 * column via the input inset. Clicks outside the input area are ignored.
+	 */
+	handleScreenClick(screenX: number, screenY: number): void {
+		const tuiAny = this.tui as any;
+		const viewportTop = typeof tuiAny?.previousViewportTop === "number" ? tuiAny.previousViewportTop : 0;
+		const clickDocRow = viewportTop + screenY;
+		const markerDocRow = typeof tuiAny?.hardwareCursorRow === "number" ? tuiAny.hardwareCursorRow : this.lastCursorMarkerRow;
+		const originDocRow = markerDocRow - this.lastCursorMarkerRow;
+		const contentIndex = clickDocRow - originDocRow - this.lastInputStart;
+		const rec = this.lastContentRows[contentIndex];
+		if (!rec) return;
+
+		const targetColumn = Math.max(0, Math.min(screenX - this.lastInputInset, rec.width));
+		const logicalLine = (this as any).state?.lines?.[rec.logicalLine] ?? "";
+		const slice = logicalLine.slice(rec.startCol);
+		const segmenter = typeof Intl !== "undefined" && typeof (Intl as any).Segmenter === "function"
+			? new (Intl as any).Segmenter(undefined, { granularity: "grapheme" })
+			: undefined;
+		let visible = 0;
+		let index = slice.length;
+		if (segmenter) {
+			for (const part of segmenter.segment(slice)) {
+				const width = safeVisibleWidth(part.segment);
+				if (targetColumn < visible + width) {
+					index = part.index;
+					break;
+				}
+				visible += width;
+			}
+		} else {
+			index = Math.min(targetColumn, slice.length);
+		}
+
+		const state = (this as any).state;
+		if (!state) return;
+		state.cursorLine = rec.logicalLine;
+		if (typeof (this as any).setCursorCol === "function") {
+			(this as any).setCursorCol(rec.startCol + index);
+		} else {
+			state.cursorCol = rec.startCol + index;
+		}
+		(this as any).lastAction = null;
+		if (typeof (this as any).exitHistoryBrowsing === "function") (this as any).exitHistoryBrowsing();
+		if ((this as any).autocompleteState && typeof (this as any).updateAutocomplete === "function") (this as any).updateAutocomplete();
+		this.tui?.requestRender?.();
 	}
 }

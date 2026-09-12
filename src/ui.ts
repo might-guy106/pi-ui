@@ -43,6 +43,9 @@ interface SessionState {
 	speedTracker?: ReturnType<typeof createAssistantSpeedTracker>;
 	requestRender?: () => void;
 	restoreTerminalBackground?: () => void;
+	restoreMouseTracking?: () => void;
+	mouseInputCleanup?: () => void;
+	boxEditor?: InstanceType<typeof BoxEditor>;
 	stale: boolean;
 }
 
@@ -81,6 +84,8 @@ function isStaleContextError(error: unknown): boolean {
 
 export function teardownSessionUI(): void {
 	endAssistantStream();
+	session?.mouseInputCleanup?.();
+	session?.restoreMouseTracking?.();
 	session?.restoreTerminalBackground?.();
 	session?.loader?.dispose();
 	session = undefined;
@@ -130,6 +135,30 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	}
 	if (ctx.ui.getToolsExpanded() !== config.alwaysExpanded) {
 		ctx.ui.setToolsExpanded(config.alwaysExpanded);
+	}
+
+	// Route terminal mouse clicks into the editor (position the text cursor).
+	// All SGR mouse sequences are consumed so they never reach the editor as
+	// keystrokes. Clicks outside the input area are ignored. Note: with mouse
+	// reporting on, terminals do text selection via Shift+drag instead.
+	if (config.editorMouse && typeof ctx.ui.onTerminalInput === "function") {
+		const sgrMouse = /^\x1b\[<(\d+);(\d+);(\d+)([Mm])$/;
+		try {
+			state.mouseInputCleanup = ctx.ui.onTerminalInput((data) => {
+				if (typeof data !== "string" || !data.startsWith("\x1b[<")) return undefined;
+				const match = sgrMouse.exec(data);
+				if (match) {
+					const button = Number(match[1]);
+					const isPress = match[4] === "M";
+					if (isPress && (button & 3) === 0) {
+						state.boxEditor?.handleScreenClick(Number(match[2]) - 1, Number(match[3]) - 1);
+					}
+				}
+				return { consume: true };
+			});
+		} catch (error) {
+			if (!isStaleContextError(error)) console.error("[pi-ui] mouse input listener failed:", error);
+		}
 	}
 
 	// Message presentation: prefixes, boxed core blocks, codeblock rail.
@@ -205,7 +234,9 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 			// (Re)apply the terminal background sync with the current theme.
 			state.restoreTerminalBackground?.();
 			state.restoreTerminalBackground = applyTerminalPageBackgroundOsc11(uiTheme, (tui as any).terminal, { force: config.forceOSC11 });
-			return new BoxEditor(
+			// Mouse click-to-position the text cursor: enable SGR mouse
+			// reporting (press events only) — pi's regular-mode TUI does not.
+			const editor = new BoxEditor(
 				tui,
 				theme as any,
 				kb,
@@ -221,6 +252,19 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 				config.inputBox.style,
 				() => getFooterTokenUsageLine(),
 			);
+			state.boxEditor = editor;
+			if (config.editorMouse && typeof (tui as any).terminal?.write === "function") {
+				state.restoreMouseTracking?.();
+				(tui as any).terminal.write("\x1b[?1000h\x1b[?1006h");
+				state.restoreMouseTracking = () => {
+					try {
+						(tui as any).terminal.write("\x1b[?1006l\x1b[?1000l");
+					} catch {
+						// terminal may be gone during shutdown — best effort
+					}
+				};
+			}
+			return editor;
 		});
 	} else {
 		ctx.ui.setEditorComponent((tui, theme, keybindings) => new CustomEditor(tui, theme as any, keybindings as any));
