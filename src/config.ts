@@ -8,6 +8,8 @@ export type InputBoxStyle = "auto" | "halfblock" | "line" | "solid";
 
 export type PresentationStyle = "droid" | "reasonix";
 
+export type CollapsedThinkingStyle = "tail" | "label";
+
 export interface InputBoxConfig {
 	style: InputBoxStyle;
 }
@@ -20,6 +22,7 @@ export interface PiUiConfig {
 	alwaysExpanded: boolean;
 	maxExpandedLines: number;
 	dimToolOutput: boolean;
+	collapsedThinking: CollapsedThinkingStyle;
 	footer: boolean;
 	forceOSC11: boolean;
 }
@@ -41,6 +44,7 @@ const DEFAULTS: PiUiConfig = {
 	alwaysExpanded: false,
 	maxExpandedLines: 50,
 	dimToolOutput: false,
+	collapsedThinking: "tail",
 	footer: true,
 	forceOSC11: false,
 };
@@ -73,6 +77,10 @@ function isInputBoxStyle(value: unknown): value is InputBoxStyle {
 
 function isPresentationStyle(value: unknown): value is PresentationStyle {
 	return value === "droid" || value === "reasonix";
+}
+
+function isCollapsedThinkingStyle(value: unknown): value is CollapsedThinkingStyle {
+	return value === "tail" || value === "label";
 }
 
 function booleanOrDefault(value: unknown, fallback: boolean): boolean {
@@ -108,6 +116,7 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 		userZoneStyle: isUserZoneStyle(config.userZoneStyle) ? config.userZoneStyle : DEFAULTS.userZoneStyle,
 		inputBox: inputBoxOrDefault(config.inputBox),
 		presentationStyle: isPresentationStyle(config.presentationStyle) ? config.presentationStyle : DEFAULTS.presentationStyle,
+		collapsedThinking: isCollapsedThinkingStyle(config.collapsedThinking) ? config.collapsedThinking : DEFAULTS.collapsedThinking,
 		customWorkingMessage: customWorkingMessageOrDefault(config.customWorkingMessage),
 		alwaysExpanded: booleanOrDefault(config.alwaysExpanded, DEFAULTS.alwaysExpanded),
 		maxExpandedLines: maxExpandedLinesOrDefault(config.maxExpandedLines),

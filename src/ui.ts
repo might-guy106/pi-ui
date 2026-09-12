@@ -1,6 +1,10 @@
 import {
+	BranchSummaryMessageComponent,
+	CompactionSummaryMessageComponent,
 	CustomEditor,
+	CustomMessageComponent,
 	InteractiveMode,
+	SkillInvocationMessageComponent,
 	type ExtensionAPI,
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
@@ -11,10 +15,20 @@ import { resolveUserZoneStyle, USER_ZONE_STYLE_NAMES } from "./editor/user-zone.
 import { createGitBranchFetcher, type GitBranchFetcher } from "./core/git-status.ts";
 import { createAssistantSpeedTracker } from "./core/assistant-speed.ts";
 import { setPresentationStyle } from "./tools/presentation/state.ts";
-import { installCompactToolSpacing } from "./tools/compact-tool-spacing.ts";
-import { installDefaultBadge } from "./tools/default-badge.ts";
+import { installCompactToolSpacing, setToolSpacingTheme } from "./tools/compact-tool-spacing.ts";
+import { installDefaultBadge, setDefaultBadgeTheme } from "./tools/default-badge.ts";
 import { installResumeToolRefresh } from "./tools/resume-tool-refresh.ts";
 import { registerToolCallTags } from "./tools/register-tool-call-tags.ts";
+import { installAssistantMessagePrefix } from "./messages/assistant-prefix.ts";
+import { installUserMessagePrefix } from "./messages/user-prefix.ts";
+import { installCoreMessageBlockStyling, setCoreMessageBlockTheme } from "./messages/core-message-blocks.ts";
+import { installMarkdownCodeBlockRenderer } from "./messages/markdown-codeblock-renderer.ts";
+import {
+	beginAssistantStream,
+	endAssistantStream,
+	trackAssistantStreamMessage,
+} from "./messages/assistant-streaming-state.ts";
+import { setFullTheme } from "./theme/theme-extras.ts";
 import {
 	createMergedWorkingLoader,
 	workingStateForAssistantMessage,
@@ -44,11 +58,27 @@ function ensureToolCallTagsRegistered(pi: ExtensionAPI): Promise<void> {
 	return toolTagsRegistration;
 }
 
+// Keep theme-derived colors in sync when the user switches themes. There is no
+// official theme-change event, so wrap the editor border updater (private, guarded)
+// the same way upstream does — symbol-marked so extension reloads don't stack it.
+function installThemeSync(getTheme: () => unknown): void {
+	const proto = InteractiveMode.prototype as any;
+	const original = proto.updateEditorBorderColor;
+	if (typeof original !== "function" || original.__piUiThemeSync) return;
+	const wrapped = function (this: unknown, ...args: unknown[]) {
+		setFullTheme(getTheme(), true);
+		return original.apply(this, args);
+	};
+	(wrapped as any).__piUiThemeSync = true;
+	proto.updateEditorBorderColor = wrapped;
+}
+
 function isStaleContextError(error: unknown): boolean {
 	return error instanceof Error && error.message.includes("stale after session replacement or reload");
 }
 
 export function teardownSessionUI(): void {
+	endAssistantStream();
 	session?.loader?.dispose();
 	session = undefined;
 }
@@ -82,6 +112,22 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	if (ctx.ui.getToolsExpanded() !== config.alwaysExpanded) {
 		ctx.ui.setToolsExpanded(config.alwaysExpanded);
 	}
+
+	// Message presentation: prefixes, boxed core blocks, codeblock rail.
+	setFullTheme(ctx.ui.theme, true);
+	installThemeSync(() => ctx.ui.theme);
+	installAssistantMessagePrefix(ctx.ui.theme);
+	installUserMessagePrefix(ctx.ui.theme);
+	installMarkdownCodeBlockRenderer();
+	installCoreMessageBlockStyling({
+		CompactionSummaryMessageComponent,
+		SkillInvocationMessageComponent,
+		BranchSummaryMessageComponent,
+		CustomMessageComponent,
+	});
+	setDefaultBadgeTheme(ctx.ui.theme);
+	setToolSpacingTheme(ctx.ui.theme);
+	setCoreMessageBlockTheme(ctx.ui.theme);
 
 	state.fetchBranch = createGitBranchFetcher(ctx.cwd, () => state.requestRender?.());
 	state.speedTracker = createAssistantSpeedTracker();
@@ -171,20 +217,27 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	pi.on("message_start", async (event) => {
 		state.loader?.touch();
 		state.speedTracker?.handleMessageStart(event.message);
-		if (event.message.role === "assistant" && runningToolCalls.size === 0) {
-			state.loader?.setState(workingStateForAssistantMessage(event.message));
+		if (event.message.role === "assistant") {
+			beginAssistantStream(event.message);
+			if (runningToolCalls.size === 0) {
+				state.loader?.setState(workingStateForAssistantMessage(event.message));
+			}
 		}
 	});
 
 	pi.on("message_update", async (event) => {
 		state.loader?.touch();
 		state.speedTracker?.handleMessageUpdate(event.message);
-		if (event.message.role === "assistant" && runningToolCalls.size === 0) {
-			state.loader?.setState(workingStateForAssistantMessage(event.message));
+		if (event.message.role === "assistant") {
+			trackAssistantStreamMessage(event.message);
+			if (runningToolCalls.size === 0) {
+				state.loader?.setState(workingStateForAssistantMessage(event.message));
+			}
 		}
 	});
 
 	pi.on("message_end", async (event) => {
+		if (event.message.role === "assistant") endAssistantStream();
 		state.speedTracker?.handleMessageEnd(event.message);
 	});
 
@@ -199,6 +252,7 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	});
 
 	pi.on("agent_end", async () => {
+		endAssistantStream();
 		runningToolCalls.clear();
 		state.loader?.stop();
 		// Reset the working message to default shortly after the run ends.

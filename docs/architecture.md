@@ -26,6 +26,14 @@ src/
 │   ├── elapsed.ts        # Elapsed/output metrics annotation
 │   ├── register-tool-call-tags.ts # Loads + registers all tool overrides (once)
 │   └── resume-tool-refresh.ts     # Re-resolves tool renderers after session resume
+├── messages/
+│   ├── assistant-prefix.ts        # • prefix, turn divider, thinking styling + tail
+│   ├── user-prefix.ts             # ❯ prefix with quote rails
+│   ├── assistant-content-runs.ts  # Layout probe: content blocks → child indices
+│   ├── assistant-streaming-state.ts # Tag-once live-stream seam
+│   ├── core-message-blocks.ts     # Boxed compaction/skill/branch/custom blocks
+│   ├── boxed-message-block.ts     # Boxed block factory
+│   └── markdown-codeblock-renderer.ts # ┃ rail + #lang codeblock rendering
 ├── core/
 │   ├── git-status.ts     # Cached git branch + +/- LOC (5s TTL, 1s git timeout)
 │   └── assistant-speed.ts# Words/sec tracker fed by message events
@@ -64,7 +72,11 @@ Private-but-stable internals used (all feature-detected, degrade gracefully):
 
 - `FooterComponent.prototype.render` (footer stats patch; symbol-marked so extension reloads don't stack).
 - `ToolExecutionComponent.prototype` (compact spacing wrapper + default badge: `getRenderContext`, `markExecutionStarted`, `updateResult`, `updateDisplay`, `getCallRenderer`, `getResultRenderer`).
-- `InteractiveMode.prototype.renderCurrentSessionState` (resume tool refresh) and `.chatContainer`/`.session` (read-only).
+- `AssistantMessageComponent.prototype.render`/`updateContent` + private `contentContainer.children` (assistant prefix; child layout discovered at runtime by the content-runs probe — per-block vs run-grouped).
+- `UserMessageComponent.prototype.render` (user prefix; strips 1-column Markdown padding).
+- `Markdown.prototype.renderToken` (codeblock rail).
+- `CompactionSummaryMessageComponent`/`SkillInvocationMessageComponent`/`BranchSummaryMessageComponent`/`CustomMessageComponent` display builders (boxed core blocks).
+- `InteractiveMode.prototype.renderCurrentSessionState` (resume tool refresh), `.updateEditorBorderColor` (theme re-sync), `.chatContainer`/`.session` (read-only).
 - `Editor` internals read via `as any` for the slash-autocomplete re-render: `state.{lines,cursorLine,cursorCol}`, `autocompleteState`, `autocompleteList.{filteredItems,selectedIndex,maxVisible}`.
 - `super.render()` output shape in `Editor.render()` (top border / content / bottom border / autocomplete) — BoxEditor splits at the last border-only line and repaints the zone between.
 

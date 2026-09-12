@@ -33,6 +33,8 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `maxExpandedLines` | `0`–`1000` | `50` | Cap on expanded tool output lines (keeps the tail). `0` means no limit. |
 | `dimToolOutput` | `true`, `false` | `false` | Dim tool output so the conversation stands out. |
 | `footer` | `true`, `false` | `true` | With the custom editor active, `true` embeds the status/token line inside the editor zone and hides pi's default footer. `false` keeps pi's default footer visible below the editor. |
+| `collapsedThinking` | `tail`, `label` | `tail` | While a thinking run is collapsed, `tail` shows the end of the last thinking line with a live `▸` marker; `label` restores pi's static label. |
+
 | `forceOSC11` | `true`, `false` | `false` | Reserved for terminal background sync (lands with the startup/terminal phase). |
 
 ## Examples

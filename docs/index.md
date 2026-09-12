@@ -17,6 +17,7 @@ Custom terminal UI for the [pi coding agent](https://github.com/earendil-works/p
 |---|---|
 | [Themes](./themes.md) | Bundled themes, how theme extras work |
 | [Working loader](./loader.md) | Spinner states, adaptive tones, custom labels |
+| [Messages](./messages.md) | Assistant/user prefixes, thinking tail, boxed blocks, codeblock rail |
 | [Tools](./tools.md) | Tool badges, split diff, presentation styles |
 
 ## Develop

@@ -2,6 +2,20 @@
 
 pi-ui's editor zone, loader, and theme tooling are ported from [sting8k/pi-droid-styling](https://github.com/sting8k/pi-droid-styling) (MIT). This page records what was ported, what was changed, and what is still planned. See the [port plan](./plans/pi-droid-styling-port-plan.md) for the full research and decision record.
 
+## Ported (Phase 3 — messages)
+
+| Module | Source | Changes on our side |
+|---|---|---|
+| `src/messages/assistant-prefix.ts` | `messages/assistant-prefix.ts` | Removed an unused helper (`isToolCallOnlyAssistantMessage`) and a dead `compactPrefix` in one render path (kept the live one); added one explicit type annotation pi 0.85's stricter inference needs. |
+| `src/messages/user-prefix.ts` | `messages/user-prefix.ts` | Import paths only. |
+| `src/messages/assistant-content-runs.ts` | `messages/assistant-content-runs.ts` | `WeakMap<Function,…)` narrowed to a callable type for eslint. |
+| `src/messages/assistant-streaming-state.ts` | `messages/assistant-streaming-state.ts` | Symbol keys rebranded to `pi-ui.*`. |
+| `src/messages/core-message-blocks.ts` | `messages/core-message-blocks.ts` | Patch flag rebranded (`__piUiCoreMessageBlocksPatched__`). |
+| `src/messages/boxed-message-block.ts` | `messages/boxed-message-block.ts` | Import paths only. |
+| `src/messages/markdown-codeblock-renderer.ts` | `messages/markdown-codeblock-renderer.ts` | Symbol key rebranded. |
+
+Not ported: `streaming-markdown-cache.ts` — dormant by design (pi-ai partials always carry `stopReason`, so its gate never engages); it is perf work anyway (Phase 5).
+
 ## Ported (Phase 2 — tools + diff)
 
 | Module | Source | Changes on our side |
@@ -43,7 +57,6 @@ Deliberately not ported from tool-tags: `quick-edit.ts` (renders tools owned by 
 
 ## Planned (see the port plan)
 
-- Phase 3: message prefixes (`•` assistant, `❯` user), boxed core-message blocks, markdown codeblock rail, collapsed thinking tail.
 - Phase 4: gradient startup header, OSC 11 terminal background.
 - Phase 5 (optional): streaming debounce, tool update coalescing, finished-render cache, chat virtualization.
 
