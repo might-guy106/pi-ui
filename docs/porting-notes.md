@@ -2,6 +2,22 @@
 
 pi-ui's editor zone, loader, and theme tooling are ported from [sting8k/pi-droid-styling](https://github.com/sting8k/pi-droid-styling) (MIT). This page records what was ported, what was changed, and what is still planned. See the [port plan](./plans/pi-droid-styling-port-plan.md) for the full research and decision record.
 
+## Ported (Phase 2 — tools + diff)
+
+| Module | Source | Changes on our side |
+|---|---|---|
+| `src/tools/common.ts` | `tool-tags/common.ts` | Removed an unused width-cache helper (leftover from a removed function). |
+| `src/tools/bash.ts`, `read.ts`, `write.ts`, `grep.ts`, `find.ts`, `ls.ts`, `edit.ts` | `tool-tags/*.ts` | Import paths only. `edit.ts` falls back to pi's core edit tool when pi-ctx-kit is absent (its renderers — including the split diff — work either way). |
+| `src/tools/default-badge.ts` | `tool-tags/default-badge.ts` | Prototype flags rebranded (`__piUiDefaultBadge*`) so pi-droid-styling and pi-ui can coexist without colliding. |
+| `src/tools/compact-tool-spacing.ts` | `tool-tags/compact-tool-spacing.ts` | Patch flags rebranded (`__piUiCompactToolSpacing*`); symbol keys rebranded to `pi-ui.*`. |
+| `src/tools/elapsed.ts` | `tool-tags/elapsed.ts` | Result-detail keys rebranded (`__piUiElapsedMs`, `__piUiOutputChars`). |
+| `src/tools/register-tool-call-tags.ts` | `tool-tags/register-tool-call-tags.ts` | Dynamic specifiers point at our `.ts` files. |
+| `src/tools/resume-tool-refresh.ts` | `tool-tags/resume-tool-refresh.ts` | Symbol keys rebranded; virtualization symbol read kept (harmlessly absent). |
+| `src/tools/presentation/*` | `presentation/*` | Symbol key rebranded to `pi-ui.presentation.active-style`. |
+| `src/tools/split-diff.ts` | `split-diff.ts` | Import paths only. |
+
+Deliberately not ported from tool-tags: `quick-edit.ts` (renders tools owned by the external pi-ctx-kit extension), `loader-accent.ts` (superseded by our merged `src/loader.ts`).
+
 ## Ported (Phase 0 + 1)
 
 | Module | Source | Changes on our side |
@@ -27,7 +43,6 @@ pi-ui's editor zone, loader, and theme tooling are ported from [sting8k/pi-droid
 
 ## Planned (see the port plan)
 
-- Phase 2: tool badges (bash/read/write/grep/find/ls + default badge), presentation styles (`droid`/`reasonix`), side-by-side split diff.
 - Phase 3: message prefixes (`•` assistant, `❯` user), boxed core-message blocks, markdown codeblock rail, collapsed thinking tail.
 - Phase 4: gradient startup header, OSC 11 terminal background.
 - Phase 5 (optional): streaming debounce, tool update coalescing, finished-render cache, chat virtualization.

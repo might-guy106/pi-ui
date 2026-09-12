@@ -1,5 +1,6 @@
 import {
 	CustomEditor,
+	InteractiveMode,
 	type ExtensionAPI,
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
@@ -9,6 +10,11 @@ import { BoxEditor } from "./editor/box-editor.ts";
 import { resolveUserZoneStyle, USER_ZONE_STYLE_NAMES } from "./editor/user-zone.ts";
 import { createGitBranchFetcher, type GitBranchFetcher } from "./core/git-status.ts";
 import { createAssistantSpeedTracker } from "./core/assistant-speed.ts";
+import { setPresentationStyle } from "./tools/presentation/state.ts";
+import { installCompactToolSpacing } from "./tools/compact-tool-spacing.ts";
+import { installDefaultBadge } from "./tools/default-badge.ts";
+import { installResumeToolRefresh } from "./tools/resume-tool-refresh.ts";
+import { registerToolCallTags } from "./tools/register-tool-call-tags.ts";
 import {
 	createMergedWorkingLoader,
 	workingStateForAssistantMessage,
@@ -25,6 +31,18 @@ interface SessionState {
 }
 
 let session: SessionState | undefined;
+
+// Tool tag overrides (bash/read/write/edit/ls/find/grep) register once per
+// process; pi.registerTool persists across sessions within the same run.
+let toolTagsRegistration: Promise<void> | undefined;
+
+function ensureToolCallTagsRegistered(pi: ExtensionAPI): Promise<void> {
+	toolTagsRegistration ??= registerToolCallTags(pi).catch((error) => {
+		toolTagsRegistration = undefined;
+		throw error;
+	});
+	return toolTagsRegistration;
+}
 
 function isStaleContextError(error: unknown): boolean {
 	return error instanceof Error && error.message.includes("stale after session replacement or reload");
@@ -49,6 +67,20 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 		// Hides pi's default footer and exposes token-usage/status lines
 		// to the editor's user zone instead.
 		installFooterStatsPatch();
+	}
+
+	// Tool presentation: badges for core tools, boxed default for the rest.
+	setPresentationStyle(config.presentationStyle);
+	installCompactToolSpacing();
+	installDefaultBadge();
+	installResumeToolRefresh(InteractiveMode);
+	try {
+		await ensureToolCallTagsRegistered(pi);
+	} catch (error) {
+		console.error("[pi-ui] tool tag registration failed:", error);
+	}
+	if (ctx.ui.getToolsExpanded() !== config.alwaysExpanded) {
+		ctx.ui.setToolsExpanded(config.alwaysExpanded);
 	}
 
 	state.fetchBranch = createGitBranchFetcher(ctx.cwd, () => state.requestRender?.());

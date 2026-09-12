@@ -6,6 +6,8 @@ export type CustomWorkingMessageConfig = Record<"working" | "thinking" | "answer
 
 export type InputBoxStyle = "auto" | "halfblock" | "line" | "solid";
 
+export type PresentationStyle = "droid" | "reasonix";
+
 export interface InputBoxConfig {
 	style: InputBoxStyle;
 }
@@ -13,6 +15,7 @@ export interface InputBoxConfig {
 export interface PiUiConfig {
 	userZoneStyle: string;
 	inputBox: InputBoxConfig;
+	presentationStyle: PresentationStyle;
 	customWorkingMessage: CustomWorkingMessageConfig;
 	alwaysExpanded: boolean;
 	maxExpandedLines: number;
@@ -33,6 +36,7 @@ const DEFAULT_INPUT_BOX: InputBoxConfig = { style: "auto" };
 const DEFAULTS: PiUiConfig = {
 	userZoneStyle: "gemini",
 	inputBox: { ...DEFAULT_INPUT_BOX },
+	presentationStyle: "droid",
 	customWorkingMessage: DEFAULT_CUSTOM_WORKING_MESSAGE,
 	alwaysExpanded: false,
 	maxExpandedLines: 50,
@@ -67,6 +71,10 @@ function isInputBoxStyle(value: unknown): value is InputBoxStyle {
 	return value === "auto" || value === "halfblock" || value === "line" || value === "solid";
 }
 
+function isPresentationStyle(value: unknown): value is PresentationStyle {
+	return value === "droid" || value === "reasonix";
+}
+
 function booleanOrDefault(value: unknown, fallback: boolean): boolean {
 	return typeof value === "boolean" ? value : fallback;
 }
@@ -99,6 +107,7 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 	return {
 		userZoneStyle: isUserZoneStyle(config.userZoneStyle) ? config.userZoneStyle : DEFAULTS.userZoneStyle,
 		inputBox: inputBoxOrDefault(config.inputBox),
+		presentationStyle: isPresentationStyle(config.presentationStyle) ? config.presentationStyle : DEFAULTS.presentationStyle,
 		customWorkingMessage: customWorkingMessageOrDefault(config.customWorkingMessage),
 		alwaysExpanded: booleanOrDefault(config.alwaysExpanded, DEFAULTS.alwaysExpanded),
 		maxExpandedLines: maxExpandedLinesOrDefault(config.maxExpandedLines),

@@ -9,6 +9,7 @@ Custom terminal UI for the [pi coding agent](https://github.com/earendil-works/p
 | [README](../README.md) | What the package is, install, quick look-and-feel tour |
 | [Configuration](./configuration.md) | Every config key in `~/.pi/agent/pi-ui.json`, defaults, examples |
 | [Editor styles](./editor-styles.md) | The 4 user-zone styles (`droid`, `gemini`, `cli-dock`, `nvim`) and input frames, with previews |
+| [Tools](./tools.md) | Tool badges, split diff, presentation styles (`droid`/`reasonix`) |
 
 ## Use
 
@@ -16,6 +17,7 @@ Custom terminal UI for the [pi coding agent](https://github.com/earendil-works/p
 |---|---|
 | [Themes](./themes.md) | Bundled themes, how theme extras work |
 | [Working loader](./loader.md) | Spinner states, adaptive tones, custom labels |
+| [Tools](./tools.md) | Tool badges, split diff, presentation styles |
 
 ## Develop
 

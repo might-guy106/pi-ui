@@ -16,6 +16,16 @@ src/
 │   ├── box-editor.ts     # BoxEditor — extends CustomEditor, overrides render() only
 │   ├── user-zone.ts      # Style presets (droid/gemini/cli-dock/nvim) + frame resolver
 │   └── cluster.ts        # Bottom-anchored multi-component render helper
+├── tools/
+│   ├── common.ts         # Boxed badge toolkit (droid + reasonix languages)
+│   ├── bash/read/write/edit/grep/find/ls.ts  # registerTool overrides for core tools
+│   ├── default-badge.ts  # Boxed fallback for unstyled tools (+ supplies hasResult)
+│   ├── compact-tool-spacing.ts # Normalizes tool component spacing
+│   ├── presentation/     # droid | reasonix design state
+│   ├── split-diff.ts     # Side-by-side diff component
+│   ├── elapsed.ts        # Elapsed/output metrics annotation
+│   ├── register-tool-call-tags.ts # Loads + registers all tool overrides (once)
+│   └── resume-tool-refresh.ts     # Re-resolves tool renderers after session resume
 ├── core/
 │   ├── git-status.ts     # Cached git branch + +/- LOC (5s TTL, 1s git timeout)
 │   └── assistant-speed.ts# Words/sec tracker fed by message events
@@ -31,6 +41,7 @@ src/
 1. `session_start` → `setupSessionUI(pi, ctx)`:
    - Load config.
    - Install the footer stats patch (custom editor + `footer: true` only): it sanitizes footer lines, captures the token-usage line and extension statuses, and hides pi's default footer.
+   - Tool presentation: set the design (`droid`/`reasonix`), install compact tool spacing + the default badge, install resume refresh, register the tool tag overrides (once per process), and apply `alwaysExpanded`.
    - Create the git branch fetcher and speed tracker.
    - Create the merged working loader and `configure()` it (spinner frames + first label).
    - `ctx.ui.setHeader(...)` → welcome screen.
@@ -52,6 +63,8 @@ Official APIs used: `ctx.ui.setHeader`, `ctx.ui.setEditorComponent`, `ctx.ui.set
 Private-but-stable internals used (all feature-detected, degrade gracefully):
 
 - `FooterComponent.prototype.render` (footer stats patch; symbol-marked so extension reloads don't stack).
+- `ToolExecutionComponent.prototype` (compact spacing wrapper + default badge: `getRenderContext`, `markExecutionStarted`, `updateResult`, `updateDisplay`, `getCallRenderer`, `getResultRenderer`).
+- `InteractiveMode.prototype.renderCurrentSessionState` (resume tool refresh) and `.chatContainer`/`.session` (read-only).
 - `Editor` internals read via `as any` for the slash-autocomplete re-render: `state.{lines,cursorLine,cursorCol}`, `autocompleteState`, `autocompleteList.{filteredItems,selectedIndex,maxVisible}`.
 - `super.render()` output shape in `Editor.render()` (top border / content / bottom border / autocomplete) — BoxEditor splits at the last border-only line and repaints the zone between.
 
