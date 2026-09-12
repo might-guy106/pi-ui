@@ -143,8 +143,14 @@ export function installUserMessagePrefix(theme: any): void {
 
 		if (design.compactLayout) return [...result, ""];
 
+		// Vertical padding: background-filled rows above and below the text so
+		// the message reads as a padded card instead of a single strip.
+		const bgRow = typeof activeTheme?.bg === "function"
+			? activeTheme.bg("userMessageBg", " ".repeat(Math.max(1, width)))
+			: "";
+
 		// Turn divider above the user message (off by default).
 		const divider = buildDividerLine(width);
-		return config.userDivider ? [divider, "", ...result, ""] : ["", ...result, ""];
+		return config.userDivider ? [divider, "", bgRow, ...result, bgRow] : [bgRow, ...result, bgRow];
 	};
 }

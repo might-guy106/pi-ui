@@ -74,7 +74,14 @@ check("no assistant divider by default", !thinkingLines.includes("───"), t
 check("assistant prefix marker still applied", thinkingLines.includes("•"), thinkingLines);
 
 // --- user prefix (off by default) ---
-installUserMessagePrefix(undefined);
+// Theme fixture with a real bg() so the padded-card rows can be asserted.
+const userTheme = {
+	bold: (t) => t,
+	italic: (t) => t,
+	fg: (color, text) => text,
+	bg: (color, text) => (color === "userMessageBg" ? `\x1b[48;2;9;9;9m${text}\x1b[49m` : text),
+};
+installUserMessagePrefix(userTheme);
 const userComponent = new UserMessageComponent("please fix the footer");
 const userLines = userComponent.render(80).map(stripAnsi).join("\n");
 check("no user prefix by default", !userLines.includes("❯"), userLines);
@@ -82,6 +89,14 @@ check("no divider around user message by default", !userLines.includes("──�
 check("user text preserved", userLines.includes("please fix the footer"));
 const userTextLine = userLines.split("\n").find((l) => l.includes("please fix the footer"));
 check("user message padded inside its row", Boolean(userTextLine && userTextLine.startsWith("  ")), JSON.stringify(userTextLine));
+const userRawLines = userComponent.render(80);
+const strippedUserLines = userRawLines.map(stripAnsi);
+check("user message has bg padding row above and below",
+	strippedUserLines[0].trim() === "" && strippedUserLines[0].length > 40
+	&& strippedUserLines[strippedUserLines.length - 1].trim() === "" && strippedUserLines[strippedUserLines.length - 1].length > 40,
+	JSON.stringify(strippedUserLines));
+check("padding rows painted with the message background",
+	userRawLines[0].includes("\x1b[48;2;9;9;9m") && userRawLines[userRawLines.length - 1].includes("\x1b[48;2;9;9;9m"));
 
 // enable prefix + dividers via config and re-render
 const { configPath } = await import("../src/config.ts");
