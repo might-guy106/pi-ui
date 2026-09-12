@@ -35,7 +35,7 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `footer` | `true`, `false` | `true` | With the custom editor active, `true` embeds the status/token line inside the editor zone and hides pi's default footer. `false` keeps pi's default footer visible below the editor. |
 | `collapsedThinking` | `tail`, `label` | `tail` | While a thinking run is collapsed, `tail` shows the end of the last thinking line with a live `▸` marker; `label` restores pi's static label. |
 
-| `forceOSC11` | `true`, `false` | `false` | Reserved for terminal background sync (lands with the startup/terminal phase). |
+| `forceOSC11` | `true`, `false` | `false` | Force the terminal background sync (OSC 11) on Windows/WSL, where it is skipped by default. See [startup](./startup.md). |
 
 ## Examples
 

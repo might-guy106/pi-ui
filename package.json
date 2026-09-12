@@ -41,7 +41,7 @@
   "scripts": {
     "lint": "eslint src eslint.config.js",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/config-loader-smoke.mjs && node --experimental-transform-types scripts/user-zone-smoke.mjs && node --experimental-transform-types scripts/tools-smoke.mjs && node --experimental-transform-types scripts/messages-smoke.mjs",
+    "test": "node scripts/config-loader-smoke.mjs && node --experimental-transform-types scripts/user-zone-smoke.mjs && node --experimental-transform-types scripts/tools-smoke.mjs && node --experimental-transform-types scripts/messages-smoke.mjs && node --experimental-transform-types scripts/startup-smoke.mjs",
     "prepublishOnly": "npm pack --dry-run"
   },
   "devDependencies": {

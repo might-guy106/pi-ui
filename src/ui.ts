@@ -29,6 +29,8 @@ import {
 	trackAssistantStreamMessage,
 } from "./messages/assistant-streaming-state.ts";
 import { setFullTheme } from "./theme/theme-extras.ts";
+import { applyTerminalPageBackgroundOsc11 } from "./theme/terminal-bg.ts";
+import { suppressStartupModelScopeLog } from "./startup.ts";
 import {
 	createMergedWorkingLoader,
 	workingStateForAssistantMessage,
@@ -41,6 +43,7 @@ interface SessionState {
 	fetchBranch?: GitBranchFetcher;
 	speedTracker?: ReturnType<typeof createAssistantSpeedTracker>;
 	requestRender?: () => void;
+	restoreTerminalBackground?: () => void;
 	stale: boolean;
 }
 
@@ -79,6 +82,7 @@ function isStaleContextError(error: unknown): boolean {
 
 export function teardownSessionUI(): void {
 	endAssistantStream();
+	session?.restoreTerminalBackground?.();
 	session?.loader?.dispose();
 	session = undefined;
 }
@@ -92,6 +96,10 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	const config = loadConfig();
 	const userZoneStyle = resolveUserZoneStyle(config.userZoneStyle);
 	const useBoxEditor = USER_ZONE_STYLE_NAMES.includes(userZoneStyle.name as (typeof USER_ZONE_STYLE_NAMES)[number]);
+
+	// Sync the terminal emulator's background to the theme page background
+	// (OSC 11). Skipped on Windows/WSL unless forceOSC11 is set.
+	suppressStartupModelScopeLog();
 
 	if (useBoxEditor && config.footer) {
 		// Hides pi's default footer and exposes token-usage/status lines
@@ -181,6 +189,9 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 		ctx.ui.setEditorComponent((tui, theme, kb) => {
 			const uiTheme = (ctx.ui.theme ?? theme) as any;
 			state.requestRender = () => tui.requestRender();
+			// (Re)apply the terminal background sync with the current theme.
+			state.restoreTerminalBackground?.();
+			state.restoreTerminalBackground = applyTerminalPageBackgroundOsc11(uiTheme, (tui as any).terminal, { force: config.forceOSC11 });
 			return new BoxEditor(
 				tui,
 				theme as any,

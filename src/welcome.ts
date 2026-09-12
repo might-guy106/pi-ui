@@ -26,6 +26,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { logoLines, logoWidth as gradientLogoWidth } from "./startup.ts";
 import {
   type Component,
   type Container,
@@ -38,6 +39,13 @@ import {
 // ─── Layout constants ────────────────────────────────────────────────────────
 
 const MAX_STACKED_COLUMN_WIDTH = 80;
+// The gradient logo is ~14 columns wide; below this width fall back to the
+// small banner so the brand column never truncates the logo mid-glyph.
+const LOGO_MIN_COLUMN_WIDTH = 20;
+
+function logoBlockWidth(): number {
+  return gradientLogoWidth();
+}
 const MIN_GRID_COLUMN_WIDTH = 40;
 const MAX_GRID_COLUMN_WIDTH = 60;
 const GRID_COLUMN_GAP = 4;
@@ -54,6 +62,8 @@ const RESOURCE_BRIDGE_KEY = "__mightguyWelcomeScreenResourceBridge";
 /**
  * Custom ASCII banner shown above the resource grid.
  * Each string is one line; rendered centred in its column.
+ * Replaced in Phase 4 by the gradient "pi" logo from src/startup.ts —
+ * this constant remains only as the ultra-narrow fallback.
  */
 const PI_BANNER = ["█████████", "███   ███", "██████   ███", "███      ███"];
 
@@ -556,6 +566,16 @@ function appendExtensionsSection(
 
 function renderBrandColumn(theme: Theme, columnWidth: number): string[] {
   const lines: string[] = [];
+  // Gradient "pi" logo (Phase 4) with a small fallback for narrow columns.
+  if (columnWidth >= LOGO_MIN_COLUMN_WIDTH) {
+    for (const logoLine of logoLines(theme)) {
+      lines.push(centerBlockLine(logoLine, logoBlockWidth(), columnWidth));
+    }
+    lines.push("");
+    const tagline = theme.fg("dim", `Pi v${VERSION}`);
+    lines.push(centerBlockLine(tagline, visibleWidth(tagline), columnWidth));
+    return lines;
+  }
   const bannerWidth = Math.max(...PI_BANNER.map((l) => visibleWidth(l)));
   for (const bannerLine of PI_BANNER) {
     lines.push(centerBlockLine(theme.bold(theme.fg("accent", bannerLine)), bannerWidth, columnWidth));

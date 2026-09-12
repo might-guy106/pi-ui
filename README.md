@@ -21,6 +21,7 @@
 - 🎛️ **Editor user zone** — the prompt area becomes a styled zone with 4 presets (`droid`, `gemini`, `cli-dock`, `nvim`): model, thinking level, context meter, git branch with +/- LOC, response speed, and token usage rendered right around your input — ported from [pi-droid-styling](https://github.com/sting8k/pi-droid-styling)
 - 🧰 **Tool badges** — boxed call/result badges for bash, read, write, edit, grep, find, and ls, with elapsed time, output size, collapsed previews, and a side-by-side split diff for edits; `reasonix` compact-row mode optional
 - 💬 **Message styling** — `•` assistant prefix with turn dividers, `❯` user prefix, muted thinking with a live collapsed-tail view, boxed compaction/skill/branch blocks, and a `┃`-railed codeblock renderer
+- 🌈 **Gradient startup** — 9-row gradient "pi" logo derived from your theme accent, key hints, ready indicator, and OSC 11 terminal background sync so the whole window matches the theme
 - 🖥️ **Custom Status Bar** — real-time footer showing model, thinking level, cwd, git branch, context usage (%), and API cost (used when the custom editor is off)
 - 🎨 **Catppuccin Dark Theme** — Dark theme based on [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) with 64+ color mappings
 - ⏳ **State-aware Working Loader** — braille spinner with labels that follow the work (Working / Thinking / Answering / Running), elapsed time, and adaptive green→yellow→red tone when the stream stalls
@@ -90,8 +91,10 @@ pi-ui/
 │   ├── welcome.ts   # Welcome screen header and resource grid
 │   ├── editor/      # BoxEditor + style presets + cluster helper
 │   ├── tools/       # Tool badges, split diff, presentation styles
+│   ├── messages/    # Prefixes, boxed blocks, codeblock rail, streaming seam
+│   ├── startup.ts   # Gradient pi logo header + clean startup
 │   ├── core/        # git status, response speed
-│   ├── theme/       # ANSI toolkit + theme extras
+│   ├── theme/       # ANSI toolkit, theme extras, OSC 11 background sync
 │   └── perf/        # Profiler (PI_UI_PROFILE=1)
 ├── themes/
 │   └── catppuccin-dark.json

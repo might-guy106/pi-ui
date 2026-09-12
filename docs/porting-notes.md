@@ -2,6 +2,15 @@
 
 pi-ui's editor zone, loader, and theme tooling are ported from [sting8k/pi-droid-styling](https://github.com/sting8k/pi-droid-styling) (MIT). This page records what was ported, what was changed, and what is still planned. See the [port plan](./plans/pi-droid-styling-port-plan.md) for the full research and decision record.
 
+## Ported (Phase 4 — startup + terminal)
+
+| Module | Source | Changes on our side |
+|---|---|---|
+| `src/startup.ts` | `startup-ui.ts` (partial) | Only the official-API half: gradient logo palette/renderer, compact header (title/hints/ready), indent helpers, and the `Model scope` console filter. The `showLoadedResources` monkey-patch and its resource tables are NOT ported — our welcome resource grid covers that job with pi's own data. |
+| `src/theme/terminal-bg.ts` | `theme/terminal-background.ts` | Import paths only; rebranded nothing (no symbols). |
+| `src/welcome.ts` | — | Brand column now renders the gradient logo (falls back to the small banner under 20 columns); version line became `Pi v<version>`. |
+| `src/ui.ts` | `index.ts` wiring | OSC 11 applied per editor creation with the current theme, restored on session shutdown/theme change; log suppressor installed at session start. |
+
 ## Ported (Phase 3 — messages)
 
 | Module | Source | Changes on our side |
@@ -57,7 +66,6 @@ Deliberately not ported from tool-tags: `quick-edit.ts` (renders tools owned by 
 
 ## Planned (see the port plan)
 
-- Phase 4: gradient startup header, OSC 11 terminal background.
 - Phase 5 (optional): streaming debounce, tool update coalescing, finished-render cache, chat virtualization.
 
 ## Version compatibility
