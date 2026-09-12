@@ -16,6 +16,7 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
   "alwaysExpanded": false,
   "maxExpandedLines": 50,
   "dimToolOutput": false,
+  "extraTools": ["grep", "find", "ls"],
   "footer": true,
   "forceOSC11": false
 }
@@ -40,6 +41,7 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `editorPrompt` | `true`, `false` | `false` | Show the `❯`/`›` glyph at the start of the input line. When off, the input keeps a small indent instead. |
 | `editorFooter` | `true`, `false` | `false` | Show the editor footer line below the input (cwd left, last reply's token usage `[↑in ↓out R… CH…%]` right) in the `gemini` style. |
 
+| `extraTools` | tool names array | `["grep", "find", "ls"]` | Extra coding tools to activate on top of pi's defaults (`read`, `bash`, `edit`, `write`). pi's `grep` uses **ripgrep** and `find` uses **fd** — both are used from your `PATH` if installed, auto-downloaded by pi otherwise. Set `[]` to keep pi's stock toolset. |
 | `forceOSC11` | `true`, `false` | `false` | Force the terminal background sync (OSC 11) on Windows/WSL, where it is skipped by default. See [startup](./startup.md). |
 
 ## Examples

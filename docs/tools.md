@@ -18,6 +18,16 @@ Each core tool gets a boxed call header and a compact result:
 
 Any other tool gets the default boxed badge (name + summarized params) with the same footer treatment.
 
+## Extra tools
+
+pi's default toolset is only `read`, `bash`, `edit`, `write`. pi-ui activates the shipped-but-disabled `grep`, `find`, and `ls` tools on top (configurable via `extraTools` in [config](./configuration.md)):
+
+- `grep` — powered by **ripgrep** (`rg`); used from your `PATH` if installed
+- `find` — powered by **fd**; same deal
+- `ls` — pure JavaScript
+
+The boxed badges cover all of them (`Search` / `Find` / `List`).
+
 `Ctrl+O` expands a tool result (or `alwaysExpanded: true` in [config](./configuration.md)); `maxExpandedLines` caps how much expanded output renders (keep the tail).
 
 ## Presentation styles

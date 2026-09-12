@@ -50,6 +50,16 @@ check("config rejects unknown inputBox.style", normalized.inputBox.style === "au
 
 const raw = JSON.parse(readFileSync(configPath(), "utf-8"));
 check("config backfills missing keys to disk", "footer" in raw && "alwaysExpanded" in raw);
+check("config default extraTools", JSON.stringify(scaffolded.extraTools) === JSON.stringify(["grep", "find", "ls"]), JSON.stringify(scaffolded.extraTools));
+
+writeFileSync(configPath(), JSON.stringify({ extraTools: ["grep", "powershell", " grep ", 42] }));
+await sleep(1100);
+const extras = loadConfig();
+check("config extraTools normalizes and dedupes", JSON.stringify(extras.extraTools) === JSON.stringify(["grep", "powershell"]), JSON.stringify(extras.extraTools));
+
+writeFileSync(configPath(), JSON.stringify({ extraTools: "nope" }));
+await sleep(1100);
+check("config extraTools falls back on non-array", JSON.stringify(loadConfig().extraTools) === JSON.stringify(["grep", "find", "ls"]));
 
 process.env.HOME = realHome;
 rmSync(tempHome, { recursive: true, force: true });

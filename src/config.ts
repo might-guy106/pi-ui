@@ -28,6 +28,7 @@ export interface PiUiConfig {
 	assistantDivider: boolean;
 	editorPrompt: boolean;
 	editorFooter: boolean;
+	extraTools: string[];
 	footer: boolean;
 	forceOSC11: boolean;
 }
@@ -55,6 +56,7 @@ const DEFAULTS: PiUiConfig = {
 	assistantDivider: false,
 	editorPrompt: false,
 	editorFooter: false,
+	extraTools: ["grep", "find", "ls"],
 	footer: true,
 	forceOSC11: false,
 };
@@ -119,6 +121,12 @@ function inputBoxOrDefault(value: unknown): InputBoxConfig {
 	return { style: isInputBoxStyle(value.style) ? value.style : DEFAULT_INPUT_BOX.style };
 }
 
+function extraToolsOrDefault(value: unknown): string[] {
+	if (!Array.isArray(value)) return [...DEFAULTS.extraTools];
+	const names = value.filter((name): name is string => typeof name === "string" && name.trim().length > 0).map((name) => name.trim());
+	return [...new Set(names)];
+}
+
 function normalizeConfig(raw: unknown): PiUiConfig {
 	if (!isRecord(raw)) return defaultConfig();
 	const config = raw as Record<string, unknown>;
@@ -136,6 +144,7 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 		assistantDivider: booleanOrDefault(config.assistantDivider, DEFAULTS.assistantDivider),
 		editorPrompt: booleanOrDefault(config.editorPrompt, DEFAULTS.editorPrompt),
 		editorFooter: booleanOrDefault(config.editorFooter, DEFAULTS.editorFooter),
+		extraTools: extraToolsOrDefault(config.extraTools),
 		footer: booleanOrDefault(config.footer, DEFAULTS.footer),
 		forceOSC11: booleanOrDefault(config.forceOSC11, DEFAULTS.forceOSC11),
 	};

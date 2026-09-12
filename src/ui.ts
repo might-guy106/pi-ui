@@ -116,6 +116,18 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	} catch (error) {
 		console.error("[pi-ui] tool tag registration failed:", error);
 	}
+	// Activate the extra coding tools (grep/find/ls — pi ships them but only
+	// enables read/bash/edit/write by default). Merged into whatever is
+	// already active so other extensions' tools are untouched.
+	if (config.extraTools.length > 0 && typeof pi.setActiveTools === "function") {
+		try {
+			const active = new Set(typeof pi.getActiveTools === "function" ? pi.getActiveTools() : []);
+			for (const name of config.extraTools) active.add(name);
+			pi.setActiveTools([...active]);
+		} catch (error) {
+			if (!isStaleContextError(error)) console.error("[pi-ui] extra tool activation failed:", error);
+		}
+	}
 	if (ctx.ui.getToolsExpanded() !== config.alwaysExpanded) {
 		ctx.ui.setToolsExpanded(config.alwaysExpanded);
 	}
