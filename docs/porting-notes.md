@@ -76,7 +76,16 @@ Deliberately not ported from tool-tags: `quick-edit.ts` (renders tools owned by 
 ## Version compatibility
 
 - Developed against pi 0.85.1 (matches the installed runtime). Upstream's own feature detection for 0.84+ (fullscreen layout, run-grouped message children) ships with the ported code.
-- Verified on 0.85.1 by `scripts/user-zone-smoke.mjs` (70+ render assertions across all four styles, all frames, NO_COLOR, narrow widths, placeholders).
+- Verified on 0.85.1 by `scripts/user-zone-smoke.mjs` (70+ render assertions across all four styles, all frames, NO_COLOR, narrow widths, placeholders) and `scripts/toc-smoke.mjs` (row math, filtering, fallbacks).
+
+### pi-ui additions beyond the port
+
+| Area | Private surface used | Guard |
+|---|---|---|
+| Collapse-all tool rows (`collapseToolOutput`) | `ToolExecutionComponent.prototype.{updateDisplay,updateResult,getRenderContext,contentTextRegion,createResultRegion}`, `Container.mouseLayout` for click hit-testing | Feature-detected; a missing field falls back to the unnormalized render |
+| `/toc` transcript jumps | TUI handle `getPrimaryScrollView()`, `ScrollView.{scrollTo,contentHeight,getContentWidth}`, `Container.children`/`render()` height maps, `UserMessageComponent.text` | Guarded per call; a regular-mode or changed-pi session gets an explanatory notice instead of an error |
+
+Note for pi 0.85.1: the tool component wraps its plain-text fallback child in a `MouseRegion` (`contentTextRegion`). pi-ui's default-badge patch previously looked for `contentText` directly in `children` and silently stopped installing the boxed fallback for unstyled tools; it now swaps the region's child instead.
 
 ## Credits
 

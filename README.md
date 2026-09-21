@@ -19,8 +19,9 @@
 ## 📋 Features
 
 - 🎛️ **Editor user zone** — the prompt area becomes a styled zone with 4 presets (`droid`, `gemini`, `cli-dock`, `nvim`): model, thinking level, context meter, git branch with +/- LOC, response speed, and token usage rendered right around your input — ported from [pi-droid-styling](https://github.com/sting8k/pi-droid-styling)
-- 🧰 **Tool badges** — boxed call/result badges for bash, read, write, edit, grep, find, and ls, with elapsed time, output size, collapsed previews, and a side-by-side split diff for edits; `reasonix` compact-row mode optional
+- 🧰 **Tool badges** — boxed badges for bash, read, write, edit, grep, find, and ls that **collapse to a single row when the call finishes** (click a row or press `Ctrl+O` to open it), with elapsed time, output size, a side-by-side split diff for edits, and a `reasonix` compact-row mode optional
 - 💬 **Message styling** — `•` assistant prefix, muted thinking with a live collapsed-tail view, boxed compaction/skill/branch blocks, and a `┃`-railed codeblock renderer; user messages stay plain (optional `❯` prefix and turn dividers in config)
+- 🧭 **Table of contents** — `/toc` lists your prompts (with a filter) and jumps the transcript to the one you pick; needs fullscreen TUI mode
 - 🌈 **Gradient startup** — 9-row gradient "pi" logo derived from your theme accent, key hints, ready indicator, and OSC 11 terminal background sync so the whole window matches the theme
 - 🖥️ **Custom Status Bar** — real-time footer showing model, thinking level, cwd, git branch, context usage (%), and API cost (used when the custom editor is off)
 - 🎨 **Catppuccin Dark Theme** — Dark theme based on [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) with 64+ color mappings
@@ -71,6 +72,14 @@ Braille spinner (⣷⣯⣟⡿⢿⣻⣽⣾) with a state label and elapsed time:
 Answering... 󰅐 12.4s
 ```
 
+### Table of contents
+
+```
+/toc
+```
+
+Filter your prompts and jump the transcript to one of them. See [docs/table-of-contents.md](./docs/table-of-contents.md).
+
 ## 🎨 Themes
 
 ```
@@ -90,7 +99,8 @@ pi-ui/
 │   ├── footer-patch.ts # Footer data capture for the editor zone
 │   ├── startup.ts   # Gradient logo header + compact resource summary
 │   ├── editor/      # BoxEditor + style presets + cluster helper
-│   ├── tools/       # Tool badges, split diff, presentation styles
+│   ├── tools/       # Tool badges, collapse decisions, split diff, presentation styles
+│   ├── navigation/  # `/toc` transcript table of contents
 │   ├── messages/    # Prefixes, boxed blocks, codeblock rail, streaming seam
 │   ├── startup.ts   # Gradient pi logo header + clean startup
 │   ├── core/        # git status, response speed

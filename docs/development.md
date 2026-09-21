@@ -24,9 +24,7 @@ the editor zone for every style and input frame.
 
 ## Pi version
 
-Dev dependencies track the installed pi runtime (currently 0.85.x). If npm
-resolves `@earendil-works/*` against the org artifactory registry and fails,
-install with the public registry:
+Dev dependencies track the installed pi runtime (currently 0.85.x). `npm` on this machine defaults to the company artifactory, which does not carry the `@earendil-works/*` packages — use the public registry:
 
 ```bash
 npm install -D --registry=https://registry.npmjs.org \
@@ -34,6 +32,8 @@ npm install -D --registry=https://registry.npmjs.org \
   @earendil-works/pi-tui@<version> \
   @earendil-works/pi-ai@<version>
 ```
+
+Anything that touches the registry (installs, `npm publish`) should pass `--registry=https://registry.npmjs.org`.
 
 ## Publishing a New Version
 
