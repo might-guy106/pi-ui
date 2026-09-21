@@ -1,6 +1,7 @@
 import { UserMessageComponent } from "@earendil-works/pi-coding-agent";
 
 import { loadConfig } from "../config.ts";
+import { PI_UI_USER_MESSAGE } from "../navigation/table-of-contents.ts";
 import { getPresentationDesign } from "../tools/presentation/state.ts";
 import { dropLeadingColumns, fgHex, isHexColor, stripAnsi } from "../theme/ansi.ts";
 import { getThemeExtra } from "../theme/theme-extras.ts";
@@ -77,6 +78,8 @@ function alignContinuationLines(lines: string[], targetIndex: number): void {
 export function installUserMessagePrefix(theme: any): void {
 	activeTheme = theme;
 	const proto = UserMessageComponent.prototype as any;
+	// Marker read by the /toc navigator to find user messages in the transcript.
+	proto[PI_UI_USER_MESSAGE] = true;
 	if (proto[PATCHED] || proto.render?.name === "patchedUserMessageRender") {
 		proto[PATCHED] = true;
 		return;

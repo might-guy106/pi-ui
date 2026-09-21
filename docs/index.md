@@ -19,7 +19,8 @@ Custom terminal UI for the [pi coding agent](https://github.com/earendil-works/p
 | [Working loader](./loader.md) | Spinner states, adaptive tones, custom labels |
 | [Startup](./startup.md) | Gradient pi logo, key hints, terminal background sync (OSC 11) |
 | [Messages](./messages.md) | Assistant prefix, thinking tail, boxed blocks, codeblock rail, message dividers (optional) |
-| [Tools](./tools.md) | Tool badges, split diff, presentation styles |
+| [Tools](./tools.md) | Tool badges, collapsed rows, split diff, presentation styles |
+| [Table of contents](./table-of-contents.md) | `/toc` — jump the transcript to an earlier user message |
 
 ## Develop
 

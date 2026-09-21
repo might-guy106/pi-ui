@@ -36,6 +36,7 @@ import {
 	workingStateForAssistantMessage,
 	type MergedWorkingLoaderController,
 } from "./loader.ts";
+import { setTableOfContentsTui } from "./navigation/table-of-contents.ts";
 import { installFooterStatsPatch, getFooterStatusLine, getFooterTokenUsageLine } from "./footer-patch.ts";
 
 interface SessionState {
@@ -82,6 +83,7 @@ function isStaleContextError(error: unknown): boolean {
 
 export function teardownSessionUI(): void {
 	endAssistantStream();
+	setTableOfContentsTui(undefined);
 	session?.restoreTerminalBackground?.();
 	session?.loader?.dispose();
 	session = undefined;
@@ -204,6 +206,7 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 		ctx.ui.setEditorComponent((tui, theme, kb) => {
 			const uiTheme = (ctx.ui.theme ?? theme) as any;
 			state.requestRender = () => tui.requestRender();
+			setTableOfContentsTui(tui);
 			// (Re)apply the terminal background sync with the current theme.
 			state.restoreTerminalBackground?.();
 			state.restoreTerminalBackground = applyTerminalPageBackgroundOsc11(uiTheme, (tui as any).terminal, { force: config.forceOSC11 });
@@ -225,7 +228,10 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 			);
 		});
 	} else {
-		ctx.ui.setEditorComponent((tui, theme, keybindings) => new CustomEditor(tui, theme as any, keybindings as any));
+		ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+			setTableOfContentsTui(tui);
+			return new CustomEditor(tui, theme as any, keybindings as any);
+		});
 	}
 
 	const runningToolCalls = new Set<string>();
