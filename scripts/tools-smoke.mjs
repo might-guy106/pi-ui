@@ -87,17 +87,56 @@ const bashCall = renderComponent(bashDef.renderCall({ command: "npm test" }, the
 check("bash call box shows tool name", bashCall.some((l) => l.includes("Bash")));
 check("bash call box shows command", bashCall.some((l) => l.includes("npm test")));
 
-// bash renderResult: collapsed shows a preview tail + metrics footer
-const bashResult = bashDef.renderResult(
-	{ content: [{ type: "text", text: Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n") }], isError: false },
-	{ expanded: false },
-	theme,
-	{ isPartial: false, hasResult: true },
+// bash renderResult: a finished result collapses to the badge (footer stashed on the
+// render state, drawn by the compact call box).
+const setCollapseMode = async (mode) => {
+	writeFileSync(configPath(), JSON.stringify({ collapseToolOutput: mode }));
+	await new Promise((resolve) => setTimeout(resolve, 1100));
+};
+const bashOutput = {
+	content: [{ type: "text", text: Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n") }],
+	isError: false,
+};
+const bashState = {};
+const bashResult = bashDef.renderResult(bashOutput, { expanded: false, isPartial: false }, theme, { isPartial: false, hasResult: true, state: bashState });
+check("bash finished result collapses to the badge", renderComponent(bashResult, 90).length === 0);
+const bashCompactCall = renderComponent(bashDef.renderCall({ command: "npm test" }, theme, { expanded: false, hasResult: true, isPartial: false, state: bashState }), 90);
+check("bash collapsed badge keeps the command", bashCompactCall.some((l) => l.includes("npm test")));
+check("bash collapsed badge shows the metrics footer", bashCompactCall.some((l) => l.includes("◷")));
+check("bash collapsed badge is three rows", bashCompactCall.length === 3, String(bashCompactCall.length));
+check("bash collapsed badge hides output", !bashCompactCall.some((l) => l.includes("line 30")));
+
+// onComplete keeps the live tail while the call is still running
+const bashPartial = renderComponent(bashDef.renderResult(bashOutput, { expanded: false, isPartial: true }, theme, { isPartial: true, hasResult: true, state: {} }), 90);
+check("bash running keeps the live tail under onComplete", bashPartial.some((l) => l.includes("line 30")));
+
+// always collapses as soon as output exists
+await setCollapseMode("always");
+const bashAlwaysPartial = renderComponent(bashDef.renderResult(bashOutput, { expanded: false, isPartial: true }, theme, { isPartial: true, hasResult: true, state: {} }), 90);
+check("bash running collapses under always", bashAlwaysPartial.length === 0);
+
+// never keeps the legacy tail preview
+await setCollapseMode("never");
+const bashLegacy = renderComponent(bashDef.renderResult(bashOutput, { expanded: false, isPartial: false }, theme, { isPartial: false, hasResult: true, state: {} }), 90);
+check("bash finished keeps the legacy tail under never", bashLegacy.some((l) => l.includes("line 30")));
+
+// errors stay open in every mode
+await setCollapseMode("onComplete");
+const bashError = renderComponent(
+	bashDef.renderResult({ content: [{ type: "text", text: "boom" }], isError: true }, { expanded: false, isPartial: false }, theme, {
+		isPartial: false,
+		hasResult: true,
+		isError: true,
+		state: {},
+	}),
+	90,
 );
-const bashResultLines = renderComponent(bashResult, 90);
-check("bash result collapsed keeps tail lines", bashResultLines.some((l) => l.includes("line 30")));
-check("bash result collapsed hides early lines", !bashResultLines.some((l) => l.includes("line 1 ")));
-check("bash result shows metrics footer", bashResultLines.some((l) => /\d/.test(l) && (l.includes("·") || l.includes("words"))));
+check("bash errors are never collapsed", bashError.some((l) => l.includes("boom")));
+
+// expanded rows show the full output again
+const bashExpanded = renderComponent(bashDef.renderResult(bashOutput, { expanded: true }, theme, { isPartial: false, hasResult: true, state: {} }), 90);
+check("bash expanded shows the full output", bashExpanded.some((l) => l.includes("line 1 ")) && bashExpanded.some((l) => l.includes("line 30")));
+check("bash shows metrics footer", renderComponent(bashOutput && bashDef.renderResult(bashOutput, { expanded: true }, theme, { isPartial: false, hasResult: true, state: {} }), 90).some((l) => l.includes("words")));
 
 // read renderCall: path label
 const readDef = tools.get("read");
@@ -154,6 +193,60 @@ const diffComponent = new SplitDiffComponent(theme, rows, 200);
 const diffLines = diffComponent.render(80).map(stripAnsi);
 check("split diff renders both columns", diffLines.some((l) => l.includes("│") && (l.includes("b = 2") || l.includes("b = 3"))));
 check("split diff shows change markers", diffLines.some((l) => l.includes("▌")));
+
+// --- edit collapse ---
+const editDef = tools.get("edit");
+const editState = {};
+const editResult = editDef.renderResult(
+	{ content: [{ type: "text", text: "edited" }], details: { diff: sampleDiff } },
+	{ expanded: false, isPartial: false },
+	theme,
+	{ isPartial: false, hasResult: true, isError: false, state: editState, args: { path: "/tmp/sample.ts" }, cwd: process.cwd() },
+);
+check("edit finished result collapses to the badge", renderComponent(editResult, 90).length === 0);
+const editCall = renderComponent(
+	editDef.renderCall({ path: "/tmp/sample.ts" }, theme, { expanded: false, hasResult: true, isPartial: false, state: editState, cwd: process.cwd() }),
+	90,
+);
+check("edit collapsed badge shows diff stats", editCall.some((l) => l.includes("+1") && l.includes("−1")), editCall.join(" | "));
+check("edit collapsed badge hides the diff body", !editCall.some((l) => l.includes("b = 3")));
+const editExpanded = renderComponent(
+	editDef.renderResult(
+		{ content: [{ type: "text", text: "edited" }], details: { diff: sampleDiff } },
+		{ expanded: true, isPartial: false },
+		theme,
+		{ isPartial: false, hasResult: true, isError: false, state: {}, args: { path: "/tmp/sample.ts" }, cwd: process.cwd() },
+	),
+	90,
+);
+check("edit expanded shows the split diff", editExpanded.some((l) => l.includes("b = 3")));
+
+// --- default badge (unknown tools) collapse ---
+// The fallback lives in a prototype patch, so drive it with a real
+// ToolExecutionComponent built without a registered renderer definition.
+const { installDefaultBadge, setDefaultBadgeTheme } = await import("../src/tools/default-badge.ts");
+const { installCompactToolSpacing, setToolSpacingTheme } = await import("../src/tools/compact-tool-spacing.ts");
+const { initTheme, ToolExecutionComponent } = await import("@earendil-works/pi-coding-agent");
+initTheme("dark");
+setDefaultBadgeTheme(theme);
+setToolSpacingTheme(theme);
+installDefaultBadge();
+installCompactToolSpacing();
+const defaultTool = new ToolExecutionComponent("WebSearch", "call-1", { query: "pi coding agent" }, { showImages: false }, undefined, { requestRender() {} }, process.cwd());
+defaultTool.updateResult({ content: [{ type: "text", text: "found things" }], isError: false }, false);
+const defaultLines = renderComponent(defaultTool, 90);
+check("default badge collapses unknown tools to a badge", defaultLines.length === 3, String(defaultLines.length));
+check("default badge keeps the tool name", defaultLines.some((l) => l.includes("Web Search")));
+check("default badge hides the output when collapsed", !defaultLines.some((l) => l.includes("found things")));
+check("default badge shows the metrics footer", defaultLines.some((l) => l.includes("◷")));
+
+// The spacing wrapper drops the leading spacer row; clicks must still map to
+// the rows that are drawn (regression guard for the hit-test reconciliation).
+const clickRow = (owner, y, width, height) =>
+	owner.handleMouse({ type: "click", button: "left", x: 1, y, screenX: 1, screenY: y, width, height, shift: false, alt: false, ctrl: false });
+const collapsedHeight = defaultLines.length;
+check("default badge click on the top row expands", Boolean(clickRow(defaultTool, 0, 90, collapsedHeight)) && defaultTool.expanded === true);
+check("default badge click on the bottom row collapses", Boolean(clickRow(defaultTool, collapsedHeight - 1, 90, collapsedHeight)) && defaultTool.expanded === false);
 
 rmSync(tempHome, { recursive: true, force: true });
 

@@ -749,9 +749,10 @@ export function formatBoxedFooter(theme: any, result: AgentToolResult<any> | und
 	return formatBoxedFooterParts(theme, result, extraParts);
 }
 
-export function renderCompactBoxedFooter(theme: any, result: AgentToolResult<any> | undefined, options: { state?: any; isError?: boolean; isPartial?: boolean } = {}): Component {
+export function renderCompactBoxedFooter(theme: any, result: AgentToolResult<any> | undefined, options: { state?: any; isError?: boolean; isPartial?: boolean; extraParts?: string[] } = {}): Component {
+	const extraParts = options.extraParts ?? [];
 	if (options.state && typeof options.state === "object") {
-		setCompactBoxedFooter(options.state, formatBoxedFooterParts(theme, result, [], true), options);
+		setCompactBoxedFooter(options.state, formatBoxedFooterParts(theme, result, extraParts, true), options);
 		return { invalidate() {}, render: () => [] };
 	}
 
@@ -760,7 +761,7 @@ export function renderCompactBoxedFooter(theme: any, result: AgentToolResult<any
 		render(width: number): string[] {
 			const renderedWidth = boxWidth(width);
 			return boxBgLines(theme, [
-				boxLine(theme, formatBoxedFooterParts(theme, result), renderedWidth),
+				boxLine(theme, formatBoxedFooterParts(theme, result, extraParts), renderedWidth),
 				boxBorder(theme, "└", "┘", renderedWidth),
 			], boxedToolBgName(options.isError, options.isPartial));
 		},

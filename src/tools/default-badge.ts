@@ -2,7 +2,8 @@ import { ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 
 import { loadConfig } from "../config.ts";
-import { formatBoxedFooter, formatToolName, formatToolParamLines, renderBoxedToolCall, renderBoxedToolResult, renderLines } from "./common.ts";
+import { formatBoxedFooter, formatToolName, formatToolParamLines, renderBoxedToolCall, renderBoxedToolResult, renderCompactBoxedToolCall, renderLines, setCompactBoxedFooter } from "./common.ts";
+import { shouldCollapseToolResult } from "./collapse.ts";
 import { annotateToolResultMetrics } from "./elapsed.ts";
 
 const PATCH_FLAG = "__piUiDefaultBadgePatched__";
@@ -45,6 +46,7 @@ type FallbackRenderCache = {
 	theme: any;
 	result: any;
 	expanded: boolean;
+	collapse: boolean;
 	maxLines: number;
 	isError: boolean;
 	isPartial: boolean;
@@ -62,6 +64,7 @@ function createBoxedFallbackComponent(owner: any): Component {
 			const isPartial = Boolean(owner.isPartial);
 			const hasResult = Boolean(owner.result);
 			const expanded = Boolean(owner.expanded);
+			const collapse = shouldCollapseToolResult({ expanded, hasResult, isPartial, isError }).collapse;
 			const maxLines = hasResult && expanded ? loadConfig().maxExpandedLines : MAX_FALLBACK_PREVIEW_LINES;
 			if (
 				cache &&
@@ -69,12 +72,26 @@ function createBoxedFallbackComponent(owner: any): Component {
 				cache.theme === theme &&
 				cache.result === owner.result &&
 				cache.expanded === expanded &&
+				cache.collapse === collapse &&
 				cache.maxLines === maxLines &&
 				cache.isError === isError &&
 				cache.isPartial === isPartial &&
 				cache.hasResult === hasResult
 			) {
 				return cache.lines;
+			}
+
+			if (collapse) {
+				// Collapsed badge: the summary footer replaces the output preview on
+				// the call box, so the row keeps its tool name and metrics only.
+				setCompactBoxedFooter(owner.rendererState, formatBoxedFooter(theme, owner.result), { isError, isPartial });
+				const lines = renderCompactBoxedToolCall(theme, formatToolName(String(owner.toolName ?? "Tool")), formatToolParamLines(owner.args, theme)[0] ?? "", {
+					state: owner.rendererState,
+					isError,
+					isPartial,
+				}).render(width);
+				cache = { width, theme, result: owner.result, expanded, collapse, maxLines, isError, isPartial, hasResult, lines };
+				return lines;
 			}
 
 			const call = renderBoxedToolCall(theme, formatToolName(String(owner.toolName ?? "Tool")), formatToolParamLines(owner.args, theme), {
@@ -84,7 +101,7 @@ function createBoxedFallbackComponent(owner: any): Component {
 			});
 			if (!hasResult) {
 				const lines = call.render(width);
-				cache = { width, theme, result: owner.result, expanded, maxLines, isError, isPartial, hasResult, lines };
+				cache = { width, theme, result: owner.result, expanded, collapse, maxLines, isError, isPartial, hasResult, lines };
 				return lines;
 			}
 
@@ -104,7 +121,7 @@ function createBoxedFallbackComponent(owner: any): Component {
 				isPartial,
 			});
 			const lines = [...call.render(width), ...result.render(width)];
-			cache = { width, theme, result: owner.result, expanded, maxLines, isError, isPartial, hasResult, lines };
+			cache = { width, theme, result: owner.result, expanded, collapse, maxLines, isError, isPartial, hasResult, lines };
 			return lines;
 		},
 	};
@@ -124,19 +141,33 @@ function installBoxedFallback(thisArg: any): void {
 	const component = thisArg[BOXED_FALLBACK_FLAG] ?? createBoxedFallbackComponent(thisArg);
 	thisArg[BOXED_FALLBACK_FLAG] = component;
 
-	const hasRendererDefinition = Boolean(thisArg.hasRendererDefinition?.());
-	const usesSelfRenderShell = hasRendererDefinition && thisArg.getRenderShell?.() === "self";
-	const targetContainer = usesSelfRenderShell ? thisArg.selfRenderContainer : thisArg.contentBox;
-	if (targetContainer && typeof targetContainer.clear === "function" && typeof targetContainer.addChild === "function") {
-		// Boxed fallback owns its own visual boundary; avoid container-level bg
-		// so the status background does not spill beyond the box.
-		tightenBoxedContainer(thisArg);
-		targetContainer.clear();
-		targetContainer.addChild(component);
+	if (thisArg.hasRendererDefinition?.()) {
+		const usesSelfRenderShell = thisArg.getRenderShell?.() === "self";
+		const targetContainer = usesSelfRenderShell ? thisArg.selfRenderContainer : thisArg.contentBox;
+		if (targetContainer && typeof targetContainer.clear === "function" && typeof targetContainer.addChild === "function") {
+			// Boxed fallback owns its own visual boundary; avoid container-level bg
+			// so the status background does not spill beyond the box.
+			tightenBoxedContainer(thisArg);
+			targetContainer.clear();
+			targetContainer.addChild(component);
+		}
+		return;
 	}
 
-	const childIndex = Array.isArray(thisArg.children) ? thisArg.children.indexOf(thisArg.contentText) : -1;
-	if (childIndex >= 0) thisArg.children[childIndex] = thisArg.contentBox;
+	// Tools without a registered renderer mount one plain-text result region.
+	// Swap the boxed fallback in behind that region so the core click-to-expand
+	// handler keeps working (pi wraps the text child in a MouseRegion).
+	const children: unknown[] = Array.isArray(thisArg.children) ? thisArg.children : [];
+	const region = thisArg.contentTextRegion;
+	const regionIndex = region ? children.indexOf(region) : -1;
+	if (regionIndex >= 0) {
+		children[regionIndex] = typeof thisArg.createResultRegion === "function" ? thisArg.createResultRegion(component) : component;
+		return;
+	}
+	const textIndex = children.indexOf(thisArg.contentText);
+	if (textIndex >= 0) {
+		children[textIndex] = typeof thisArg.createResultRegion === "function" ? thisArg.createResultRegion(component) : component;
+	}
 }
 
 export function setDefaultBadgeTheme(theme: any): void {

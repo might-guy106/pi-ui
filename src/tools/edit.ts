@@ -15,7 +15,8 @@ import {
 	firstText,
 	renderDiffMeter,
 } from "./split-diff.ts";
-import { formatBoxedFooter, getTextOutput, isExpanded, renderBoxedToolCall, renderBoxedToolResult, resolveRelativePath } from "./common.ts";
+import { boxedToolWidthKey, formatBoxedFooter, getTextOutput, isExpanded, renderBoxedToolCall, renderBoxedToolResult, renderCompactBoxedFooter, renderCompactBoxedToolCall, resolveRelativePath } from "./common.ts";
+import { shouldCollapseToolResult } from "./collapse.ts";
 import { wrapExecuteWithTiming } from "./elapsed.ts";
 
 const MAX_HIGHLIGHT_DIFF_CHARS = 12000;
@@ -74,7 +75,22 @@ export async function registerEditTool(pi: ExtensionAPI): Promise<void> {
 			const cwd = typeof context?.cwd === "string" ? context.cwd : process.cwd();
 			const relPath = rawPath ? resolveRelativePath(rawPath, cwd) : "";
 			const detail = relPath || "(unknown)";
+			const { collapse } = shouldCollapseToolResult({
+				expanded: Boolean(context?.expanded),
+				hasResult: Boolean(context?.hasResult),
+				isPartial: Boolean(context?.isPartial),
+				isError: Boolean(context?.isError),
+			});
+			if (collapse) {
+				return renderCompactBoxedToolCall(theme, "Edit", `${theme.fg("dim", "Path: ")}${detail}`, {
+					widthKey: boxedToolWidthKey("Edit", detail),
+					state: context?.state,
+					isError: Boolean(context?.isError),
+					isPartial: Boolean(context?.isPartial),
+				});
+			}
 			return renderBoxedToolCall(theme, "Edit", [`${theme.fg("dim", "Path: ")}${detail}`], {
+				widthKey: boxedToolWidthKey("Edit", detail),
 				isError: Boolean(context?.isError),
 				isPartial: Boolean(context?.isPartial),
 				isPending: Boolean(context?.isPartial && !context?.hasResult),
@@ -98,6 +114,21 @@ export async function registerEditTool(pi: ExtensionAPI): Promise<void> {
 			// Extract diff from result details
 			const details = result.details as { diff?: string; path?: string } | undefined;
 			const diff = details?.diff as string | undefined;
+
+			const { collapse } = shouldCollapseToolResult({
+				expanded: isExpanded(options),
+				hasResult: true,
+				isPartial: Boolean(options?.isPartial),
+			});
+			if (collapse) {
+				const stats = diff ? countDiffStats(diff) : undefined;
+				return renderCompactBoxedFooter(theme, result, {
+					state: context?.state,
+					isError: Boolean(context?.isError),
+					isPartial: Boolean(options?.isPartial),
+					extraParts: stats ? [`+${stats.additions} −${stats.removals}`] : [],
+				});
+			}
 
 			if (!diff) {
 				const output = stripAnsi(getTextOutput(result)).trim();

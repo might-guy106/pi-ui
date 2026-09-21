@@ -4,19 +4,35 @@ pi-ui restyles how pi's tool calls and results render in the conversation — bo
 
 ## Tool badges
 
-Each core tool gets a boxed call header and a compact result:
+Each core tool gets a boxed call header and a compact result. By default every finished tool call collapses to a single badge row — the tool name, a status icon, the key parameter, and a metrics footer (elapsed time, output size). Clicking the row (or pressing `Ctrl+O`) opens the full output.
 
-| Tool | Badge | Call shows | Collapsed result shows |
+| Tool | Badge | Badge shows | Opened shows |
 |---|---|---|---|
-| bash | `Bash` | shell-syntax-highlighted `$ command` lines | last lines of output, elapsed time + output size footer |
-| read | `Read` | `Path: ~/file.ts:10-50` | footer only; expanded = numbered, syntax-highlighted file content |
-| write | `Write` | `Path` | footer only; expanded = `↳ Wrote N lines.` |
-| edit | `Edit` | `Path` | **side-by-side split diff** (see below) |
+| bash | `Bash` | `$ command` | the output tail, elapsed time + output size footer |
+| read | `Read` | `Path: ~/file.ts:10-50` | numbered, syntax-highlighted file content |
+| write | `Write` | `Path` | `↳ Wrote N lines.` |
+| edit | `Edit` | `Path`, `+N −M` in the footer | side-by-side split diff (see below) |
 | grep | `Search` | `Query: /pattern/ in path` | match lines + `↳ Found N matches.` |
 | find | `Find` | `Pattern: *.ts in path` | file list + `↳ Found N files.` |
 | ls | `List` | `Path` | item list + `↳ Listed N items.` |
 
-Any other tool gets the default boxed badge (name + summarized params) with the same footer treatment.
+Any other tool (subagent, web search, extension tools) gets the same boxed badge with the tool name and summarized params.
+
+## Collapse behaviour
+
+`collapseToolOutput` in [config](./configuration.md) decides when bash, edit and unstyled tools close:
+
+| Value | While the tool runs | When it finishes |
+|---|---|---|
+| `onComplete` *(default)* | live preview (bash output tail, edit progress, tool output) | badge |
+| `always` | badge | badge |
+| `never` | open | open (bash keeps a 5-line tail, edit keeps its 36-row diff) |
+
+- `read`, `write`, `grep`, `find` and `ls` always render as a badge — their output only appears when you open them.
+- A **failed** tool never collapses: the error text stays visible.
+- `alwaysExpanded: true` keeps everything open, whatever this setting says.
+- `Ctrl+O` opens or closes every tool row at once; a click on one row overrides just that row.
+- Live output while a tool is running stays visible under `onComplete`; switch to `always` if a long-running command should stay quiet until it finishes.
 
 ## Extra tools
 
@@ -28,7 +44,7 @@ pi's default toolset is only `read`, `bash`, `edit`, `write`. pi-ui activates th
 
 The boxed badges cover all of them (`Search` / `Find` / `List`).
 
-`Ctrl+O` expands a tool result (or `alwaysExpanded: true` in [config](./configuration.md)); `maxExpandedLines` caps how much expanded output renders (keep the tail).
+`Ctrl+O` expands a tool result (or `alwaysExpanded: true` in [config](./configuration.md)); `maxExpandedLines` caps how much expanded output renders (keep the tail). Clicking a tool row toggles that one row — the click map is lined up with the drawn rows, so any row of the box works, including the top border.
 
 ## Presentation styles
 

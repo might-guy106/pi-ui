@@ -10,6 +10,8 @@ export type PresentationStyle = "droid" | "reasonix";
 
 export type CollapsedThinkingStyle = "tail" | "label";
 
+export type CollapseToolOutput = "onComplete" | "always" | "never";
+
 export interface InputBoxConfig {
 	style: InputBoxStyle;
 }
@@ -20,6 +22,7 @@ export interface PiUiConfig {
 	presentationStyle: PresentationStyle;
 	customWorkingMessage: CustomWorkingMessageConfig;
 	alwaysExpanded: boolean;
+	collapseToolOutput: CollapseToolOutput;
 	maxExpandedLines: number;
 	dimToolOutput: boolean;
 	collapsedThinking: CollapsedThinkingStyle;
@@ -49,6 +52,7 @@ const DEFAULTS: PiUiConfig = {
 	presentationStyle: "droid",
 	customWorkingMessage: DEFAULT_CUSTOM_WORKING_MESSAGE,
 	alwaysExpanded: false,
+	collapseToolOutput: "onComplete",
 	maxExpandedLines: 50,
 	dimToolOutput: false,
 	collapsedThinking: "tail",
@@ -97,6 +101,10 @@ function isCollapsedThinkingStyle(value: unknown): value is CollapsedThinkingSty
 	return value === "tail" || value === "label";
 }
 
+function isCollapseToolOutput(value: unknown): value is CollapseToolOutput {
+	return value === "onComplete" || value === "always" || value === "never";
+}
+
 function booleanOrDefault(value: unknown, fallback: boolean): boolean {
 	return typeof value === "boolean" ? value : fallback;
 }
@@ -139,6 +147,7 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 		collapsedThinking: isCollapsedThinkingStyle(config.collapsedThinking) ? config.collapsedThinking : DEFAULTS.collapsedThinking,
 		customWorkingMessage: customWorkingMessageOrDefault(config.customWorkingMessage),
 		alwaysExpanded: booleanOrDefault(config.alwaysExpanded, DEFAULTS.alwaysExpanded),
+		collapseToolOutput: isCollapseToolOutput(config.collapseToolOutput) ? config.collapseToolOutput : DEFAULTS.collapseToolOutput,
 		maxExpandedLines: maxExpandedLinesOrDefault(config.maxExpandedLines),
 		dimToolOutput: booleanOrDefault(config.dimToolOutput, DEFAULTS.dimToolOutput),
 		userPrefix: booleanOrDefault(config.userPrefix, DEFAULTS.userPrefix),

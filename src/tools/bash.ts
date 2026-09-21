@@ -6,7 +6,8 @@ import { safeTruncateToWidth } from "../render-budget.ts";
 import { stripAnsi } from "../theme/ansi.ts";
 import { loadConfig } from "../config.ts";
 import { getPresentationDesign } from "./presentation/state.ts";
-import { boxedToolWidthKey, formatBoxedFooter, formatToolOutputLine, getTextOutput, isExpanded, renderBoxedToolCall, renderBoxedToolResult, replaceTabs } from "./common.ts";
+import { boxedToolWidthKey, formatBoxedFooter, formatToolOutputLine, getTextOutput, isExpanded, renderBoxedToolCall, renderBoxedToolResult, renderCompactBoxedFooter, renderCompactBoxedToolCall, replaceTabs } from "./common.ts";
+import { shouldCollapseToolResult } from "./collapse.ts";
 import { wrapExecuteWithTiming } from "./elapsed.ts";
 
 const MAX_BASH_PREVIEW_LINES = 5;
@@ -295,13 +296,46 @@ export function registerBashTool(pi: ExtensionAPI): void {
 		}),
 		renderCall(args: any, theme: any, context: any) {
 			const rawCommand = String(args?.command ?? "...");
-			return renderBoxedBashCall(theme, rawCommand.split("\n"), args?.timeout, bashWidthKey(rawCommand, args?.timeout), context);
+			const commandLines = rawCommand.split("\n");
+			const widthKey = bashWidthKey(rawCommand, args?.timeout);
+			const { collapse } = shouldCollapseToolResult({
+				expanded: Boolean(context?.expanded),
+				hasResult: Boolean(context?.hasResult),
+				isPartial: Boolean(context?.isPartial),
+				isError: Boolean(context?.isError),
+			});
+			if (collapse) {
+				const detail = `${theme.fg("dim", "$ ")}${highlightBashLine(commandLines[0] ?? "", theme)}`;
+				return renderCompactBoxedToolCall(theme, "Bash", detail, {
+					widthKey,
+					state: context?.state,
+					isError: Boolean(context?.isError),
+					isPartial: Boolean(context?.isPartial),
+				});
+			}
+			return renderBoxedBashCall(theme, commandLines, args?.timeout, widthKey, context);
 		},
 		renderResult(result, options, theme: any, context: any) {
 			const raw = getTextOutput(result);
 			const outputColor = context?.isError ? "error" : "toolOutput";
+			const expanded = isExpanded(options);
 
-			if (!isExpanded(options)) {
+			const { collapse } = shouldCollapseToolResult({
+				expanded,
+				hasResult: true,
+				isPartial: Boolean(options?.isPartial),
+				isError: Boolean(context?.isError),
+			});
+			if (collapse) {
+				return renderCompactBoxedFooter(theme, result, {
+					state: context?.state,
+					isError: Boolean(context?.isError),
+					isPartial: Boolean(options?.isPartial),
+					extraParts: [`⏹ ${formatTimeout(context)}`],
+				});
+			}
+
+			if (!expanded) {
 				const scanLines = MAX_BASH_PREVIEW_LINES + 10;
 				let nlCount = 0;
 				let tailStart = 0;

@@ -14,6 +14,7 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
     "running": "Running"
   },
   "alwaysExpanded": false,
+  "collapseToolOutput": "onComplete",
   "maxExpandedLines": 50,
   "dimToolOutput": false,
   "extraTools": ["grep", "find", "ls"],
@@ -31,6 +32,7 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `presentationStyle` | `droid`, `reasonix` | `droid` | Tool rendering language: `droid` = boxed cards with tinted backgrounds, `reasonix` = compact single-row lines, 80% width, no backgrounds. See [tools](./tools.md). |
 | `customWorkingMessage` | strings | see above | Rename the working-loader labels. Set only the ones you want to change; empty/missing strings keep the default. |
 | `alwaysExpanded` | `true`, `false` | `false` | Open tool results by default. `Ctrl+O` still toggles expansion per session. |
+| `collapseToolOutput` | `onComplete`, `always`, `never` | `onComplete` | When bash, edit and unstyled tools collapse to a one-row badge. `onComplete` keeps the live preview while the tool runs and collapses when it finishes; `always` collapses as soon as any output exists; `never` keeps the previous always-open look. Clicking a tool row (or `Ctrl+O`) opens it either way. Errors never collapse. See [tools](./tools.md). |
 | `maxExpandedLines` | `0`–`1000` | `50` | Cap on expanded tool output lines (keeps the tail). `0` means no limit. |
 | `dimToolOutput` | `true`, `false` | `false` | Dim tool output so the conversation stands out. |
 | `footer` | `true`, `false` | `true` | With the custom editor active, `true` embeds the status/token line inside the editor zone and hides pi's default footer. `false` keeps pi's default footer visible below the editor. |
@@ -40,7 +42,6 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `assistantDivider` | `true`, `false` | `false` | Draw a full-width divider line above each assistant message. |
 | `editorPrompt` | `true`, `false` | `false` | Show the `❯`/`›` glyph at the start of the input line. When off, the input keeps a small indent instead. |
 | `editorFooter` | `true`, `false` | `false` | Show the editor footer line below the input (cwd left, last reply's token usage `[↑in ↓out R… CH…%]` right) in the `gemini` style. |
-
 | `showProvider` | `true`, `false` | `false` | Show the provider name next to the model in the editor status rows (`databricks-glance system.ai…`). Off by default — only the model id shows. |
 | `extraTools` | tool names array | `["grep", "find", "ls"]` | Extra coding tools to activate on top of pi's defaults (`read`, `bash`, `edit`, `write`). pi's `grep` uses **ripgrep** and `find` uses **fd** — both are used from your `PATH` if installed, auto-downloaded by pi otherwise. Set `[]` to keep pi's stock toolset. |
 | `forceOSC11` | `true`, `false` | `false` | Force the terminal background sync (OSC 11) on Windows/WSL, where it is skipped by default. See [startup](./startup.md). |
@@ -69,4 +70,16 @@ Compact conversation (reasonix tool rows):
 
 ```json
 { "presentationStyle": "reasonix" }
+```
+
+Collapse tool output only when a tool finishes (and keep it open while it runs):
+
+```json
+{ "collapseToolOutput": "onComplete" }
+```
+
+Never collapse bash output or edit diffs on their own:
+
+```json
+{ "collapseToolOutput": "never" }
 ```

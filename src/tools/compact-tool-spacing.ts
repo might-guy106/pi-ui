@@ -17,9 +17,21 @@ const DELEGATE_AWARE_PATCH_VERSION = 10;
 
 type ToolSpacingRuntimeState = {
 	usesReasonix(): boolean;
-	normalizeReasonix(lines: string[], width: number, expanded: boolean): string[];
+	normalizeReasonix(lines: string[], width: number, expanded: boolean): NormalizedToolRender;
 	showDivider(): boolean;
 	buildDivider(width: number): string;
+};
+
+/**
+ * Normalized tool lines plus how many source lines were dropped at the head
+ * and tail. The core component records its child hit-test map while rendering
+ * the unnormalized lines, so the wrapper replays these drops onto that map to
+ * keep mouse hit-testing aligned with what is actually drawn.
+ */
+type NormalizedToolRender = {
+	lines: string[];
+	dropLead: number;
+	dropTail: number;
 };
 
 let cachedTheme: any = null;
@@ -37,13 +49,15 @@ function buildDividerLine(width: number): string {
 	return cachedTheme ? fgHex(cachedTheme, color, line) : line;
 }
 
-function trimOuterBlankLines(lines: string[]): string[] {
+function trimBounds(lines: string[]): { start: number; end: number } {
 	let start = 0;
 	let end = lines.length;
 	while (start < end && stripAnsi(lines[start] ?? "").trim() === "") start++;
 	while (end > start && stripAnsi(lines[end - 1] ?? "").trim() === "") end--;
-	return lines.slice(start, end);
+	return { start, end };
 }
+
+const EMPTY_RENDER: NormalizedToolRender = { lines: [], dropLead: 0, dropTail: 0 };
 
 /**
  * ToolExecutionComponent appends terminal image lines (kitty/iTerm2 escape
@@ -98,9 +112,20 @@ function formatReasonixMetricsLine(footerLine: string, width: number): string {
 }
 
 export function normalizeReasonixToolLines(lines: string[], width: number, expanded: boolean): string[] {
-	const content = trimOuterBlankLines(lines);
-	while (content.length > 0 && isFullWidthDivider(content[0] ?? "", width)) content.shift();
-	if (content.length === 0) return [];
+	return normalizeReasonixRender(lines, width, expanded).lines;
+}
+
+function normalizeReasonixRender(lines: string[], width: number, expanded: boolean): NormalizedToolRender {
+	const bounds = trimBounds(lines);
+	const dropLead = bounds.start;
+	const dropTail = lines.length - bounds.end;
+	const content = lines.slice(bounds.start, bounds.end);
+	let headerDrop = 0;
+	while (content.length > 0 && isFullWidthDivider(content[0] ?? "", width)) {
+		content.shift();
+		headerDrop++;
+	}
+	if (content.length === 0) return EMPTY_RENDER;
 
 	const rowWidth = expanded ? Math.max(1, width) : getReasonixCollapsedRowWidth(width);
 	if (expanded) {
@@ -108,7 +133,8 @@ export function normalizeReasonixToolLines(lines: string[], width: number, expan
 		for (let index = 1; index < content.length; index++) {
 			content[index] = truncateReasonixLine(colorReasonixConnector(content[index] ?? ""), rowWidth);
 		}
-		return [...content, ""];
+		// The trailing spacer row replaces one dropped line.
+		return { lines: [...content, ""], dropLead: dropLead + headerDrop, dropTail: Math.max(0, dropTail - 1) };
 	}
 
 	let footerIndex = -1;
@@ -122,16 +148,24 @@ export function normalizeReasonixToolLines(lines: string[], width: number, expan
 	const outputIndex = content.findIndex((line, index) => index > 0 && stripAnsi(line).trimStart().startsWith("└─ "));
 	const headerEnd = outputIndex >= 0 ? outputIndex : footerIndex >= 0 ? footerIndex : content.length;
 	const headerRows = content.slice(0, Math.max(1, headerEnd)).map((line) => truncateReasonixLine(toSingleRenderLine(line), rowWidth));
-	if (footerIndex < 0) return [...headerRows, ""];
-	return [...headerRows, formatReasonixMetricsLine(content[footerIndex] ?? "", rowWidth), ""];
+	if (footerIndex < 0) return { lines: [...headerRows, ""], dropLead: dropLead + headerDrop, dropTail: Math.max(0, dropTail - 1) };
+	const rows = [...headerRows, formatReasonixMetricsLine(content[footerIndex] ?? "", rowWidth), ""];
+	// Collapsed rows fold the body away; the hit-test map keeps the body rows in
+	// place, and the call/result regions only toggle the same flag, so the first
+	// visible rows stay clickable.
+	return { lines: rows, dropLead: dropLead + headerDrop, dropTail: Math.max(0, dropTail - 1) };
 }
 
-function normalizeBoxedLines(lines: string[]): string[] | undefined {
+function normalizeBoxedLines(lines: string[]): NormalizedToolRender | undefined {
 	const boxStart = lines.findIndex((line) => stripAnsi(line).startsWith("┌"));
 	if (boxStart < 0) return undefined;
 	let boxEnd = lines.length - 1;
 	while (boxEnd > boxStart && stripAnsi(lines[boxEnd] ?? "").trim() === "") boxEnd--;
-	return lines.slice(boxStart, boxEnd + 1);
+	return {
+		lines: lines.slice(boxStart, boxEnd + 1),
+		dropLead: boxStart,
+		dropTail: lines.length - (boxEnd + 1),
+	};
 }
 
 // Cache divider per width to keep stable string references across frames.
@@ -149,26 +183,53 @@ function legacyWrapperInChain(): boolean {
  * Reasonix removes outer dividers, keeps one spacer row, and folds collapsed
  * output into a header plus metrics connector. Droid keeps existing spacing.
  */
-function normalizeToolRenderLines(lines: string[], width: number, expanded: boolean): string[] {
+function normalizeToolRenderLines(lines: string[], width: number, expanded: boolean): NormalizedToolRender {
 	const { content, tail } = splitImageTail(lines);
+	const unsplit: NormalizedToolRender = { lines, dropLead: 0, dropTail: 0 };
 
 	if (getPresentationDesign().compactLayout) {
-		return appendImageTail(normalizeReasonixToolLines(content, width, expanded), tail);
+		const render = normalizeReasonixRender(content, width, expanded);
+		return { ...render, lines: appendImageTail(render.lines, tail) };
 	}
 
 	const boxedLines = normalizeBoxedLines(content);
-	if (boxedLines) return appendImageTail(boxedLines, tail);
+	if (boxedLines) return { ...boxedLines, lines: appendImageTail(boxedLines.lines, tail) };
 
 	// A pre-versioned legacy wrapper already added divider/trailing-blank
 	// spacing; keep its non-boxed output instead of stacking a second divider.
-	if (legacyWrapperInChain()) return lines;
+	if (legacyWrapperInChain()) return unsplit;
 
-	if (getThemeExtra(cachedTheme, "showDivider") === "false") return appendImageTail([...content, ""], tail);
+	if (getThemeExtra(cachedTheme, "showDivider") === "false") return { lines: appendImageTail([...content, ""], tail), dropLead: 0, dropTail: 0 };
 	if (cachedDividerWidth !== width) {
 		cachedDivider = buildDividerLine(width);
 		cachedDividerWidth = width;
 	}
-	return appendImageTail([cachedDivider, ...content, ""], tail);
+	return { lines: appendImageTail([cachedDivider, ...content, ""], tail), dropLead: 0, dropTail: 0 };
+}
+
+/**
+ * Replay the wrapper's head/tail line drops onto the core component's
+ * hit-test map so clicks resolve to the rows that are actually drawn.
+ */
+function reconcileToolMouseLayout(owner: any, width: number, dropLead: number, dropTail: number): void {
+	const layout = owner?.mouseLayout;
+	if (!layout || layout.width !== width || !Array.isArray(layout.children)) return;
+	if (dropLead <= 0 && dropTail <= 0) return;
+
+	const heights = layout.children.map((child: any) => Math.max(0, Math.floor(child?.height ?? 0)));
+	let lead = dropLead;
+	for (let index = 0; index < heights.length && lead > 0; index++) {
+		const taken = Math.min(heights[index]!, lead);
+		heights[index] = heights[index]! - taken;
+		lead -= taken;
+	}
+	let tail = dropTail;
+	for (let index = heights.length - 1; index >= 0 && tail > 0; index--) {
+		const taken = Math.min(heights[index]!, tail);
+		heights[index] = heights[index]! - taken;
+		tail -= taken;
+	}
+	layout.children = layout.children.map((child: any, index: number) => ({ component: child.component, height: heights[index]! }));
 }
 
 /**
@@ -212,7 +273,9 @@ export function installCompactToolSpacing(ToolExecutionComponentClass: any = Too
 		const rendered = baseRender.call(this, width);
 		if (rendered.length === 0 || width <= 0) return rendered;
 		const runtime = proto[RUNTIME_STATE_KEY] as ToolSpacingRuntimeState;
-		return runtime.normalizeReasonix(rendered, width, Boolean(this.expanded));
+		const normalized = runtime.normalizeReasonix(rendered, width, Boolean(this.expanded));
+		reconcileToolMouseLayout(this, width, normalized.dropLead, normalized.dropTail);
+		return normalized.lines;
 	};
 	(patchedToolRender as any)[PATCH_VERSION_KEY] = PATCH_VERSION;
 	proto.render = patchedToolRender;
