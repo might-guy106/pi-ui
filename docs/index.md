@@ -21,6 +21,7 @@ Custom terminal UI for the [pi coding agent](https://github.com/earendil-works/p
 | [Messages](./messages.md) | Assistant prefix, thinking tail, boxed blocks, codeblock rail, message dividers (optional) |
 | [Tools](./tools.md) | Tool badges, collapsed rows, split diff, presentation styles |
 | [Table of contents](./table-of-contents.md) | `/toc` — jump the transcript to an earlier user message |
+| [Focus mode](./final-response.md) | `/final` or `alt+g` — collapse the transcript to the final response |
 
 ## Develop
 

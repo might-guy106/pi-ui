@@ -38,6 +38,7 @@ import {
 	type MergedWorkingLoaderController,
 } from "./loader.ts";
 import { setTableOfContentsTui } from "./navigation/table-of-contents.ts";
+import { setFinalResponseTui } from "./navigation/final-response.ts";
 import { installFooterStatsPatch, getFooterStatusLine, getFooterTokenUsageLine } from "./footer-patch.ts";
 
 interface SessionState {
@@ -85,6 +86,7 @@ function isStaleContextError(error: unknown): boolean {
 export function teardownSessionUI(): void {
 	endAssistantStream();
 	setTableOfContentsTui(undefined);
+	setFinalResponseTui(undefined);
 	session?.restoreTerminalBackground?.();
 	session?.loader?.dispose();
 	session = undefined;
@@ -209,6 +211,7 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 			const uiTheme = (ctx.ui.theme ?? theme) as any;
 			state.requestRender = () => tui.requestRender();
 			setTableOfContentsTui(tui);
+			setFinalResponseTui(tui);
 			// (Re)apply the terminal background sync with the current theme.
 			state.restoreTerminalBackground?.();
 			state.restoreTerminalBackground = applyTerminalPageBackgroundOsc11(uiTheme, (tui as any).terminal, { force: config.forceOSC11 });
@@ -232,6 +235,7 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	} else {
 		ctx.ui.setEditorComponent((tui, theme, keybindings) => {
 			setTableOfContentsTui(tui);
+			setFinalResponseTui(tui);
 			return new CustomEditor(tui, theme as any, keybindings as any);
 		});
 	}

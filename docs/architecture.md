@@ -37,7 +37,8 @@ src/
 │   ├── markdown-codeblock-renderer.ts # Full-width band + #lang label (no rail)
 │   └── markdown-quote-renderer.ts # Quote band, replaces the `│ ` border
 ├── navigation/
-│   └── table-of-contents.ts # `/toc` — user-message list + transcript jump (fullscreen ScrollView)
+│   ├── table-of-contents.ts # `/toc` — user-message list + transcript jump (fullscreen ScrollView)
+│   └── final-response.ts    # `/final` + alt+g — collapse everything but the final text run
 ├── core/
 │   ├── git-status.ts     # Cached git branch + +/- LOC (5s TTL, 1s git timeout)
 │   └── assistant-speed.ts# Words/sec tracker fed by message events

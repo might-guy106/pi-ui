@@ -45,6 +45,7 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 | `showProvider` | `true`, `false` | `false` | Show the provider name next to the model in the editor status rows (`databricks-glance system.ai…`). Off by default — only the model id shows. |
 | `extraTools` | tool names array | `["grep", "find", "ls"]` | Extra coding tools to activate on top of pi's defaults (`read`, `bash`, `edit`, `write`). pi's `grep` uses **ripgrep** and `find` uses **fd** — both are used from your `PATH` if installed, auto-downloaded by pi otherwise. Set `[]` to keep pi's stock toolset. |
 | `forceOSC11` | `true`, `false` | `false` | Force the terminal background sync (OSC 11) on Windows/WSL, where it is skipped by default. See [startup](./startup.md). |
+| `finalResponseShortcut` | key id | `alt+g` | Keyboard toggle for [focus mode](./final-response.md) (`/final`). Any key id pi understands. |
 
 ## Examples
 

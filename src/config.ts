@@ -35,6 +35,7 @@ export interface PiUiConfig {
 	extraTools: string[];
 	footer: boolean;
 	forceOSC11: boolean;
+	finalResponseShortcut: string;
 }
 
 const DEFAULT_CUSTOM_WORKING_MESSAGE: CustomWorkingMessageConfig = {
@@ -65,6 +66,7 @@ const DEFAULTS: PiUiConfig = {
 	extraTools: ["grep", "find", "ls"],
 	footer: true,
 	forceOSC11: false,
+	finalResponseShortcut: "alt+g",
 };
 
 export const USER_ZONE_STYLE_NAMES = ["droid", "gemini", "cli-dock", "nvim"] as const;
@@ -159,6 +161,7 @@ function normalizeConfig(raw: unknown): PiUiConfig {
 		extraTools: extraToolsOrDefault(config.extraTools),
 		footer: booleanOrDefault(config.footer, DEFAULTS.footer),
 		forceOSC11: booleanOrDefault(config.forceOSC11, DEFAULTS.forceOSC11),
+		finalResponseShortcut: typeof config.finalResponseShortcut === "string" ? config.finalResponseShortcut : DEFAULTS.finalResponseShortcut,
 	};
 }
 

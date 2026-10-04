@@ -22,6 +22,7 @@
 - 🧰 **Tool badges** — boxed badges for bash, read, write, edit, grep, find, and ls that **collapse to a single row when the call finishes** (click a row or press `Ctrl+O` to open it), with elapsed time, output size, a side-by-side split diff for edits, and a `reasonix` compact-row mode optional
 - 💬 **Message styling** — `•` assistant prefix, muted thinking with a live collapsed-tail view, boxed compaction/skill/branch blocks, and full-width bands for code blocks and quotes (no rail characters, so selections copy the text alone); user messages stay plain (optional `❯` prefix and turn dividers in config)
 - 🧭 **Table of contents** — `/toc` lists your prompts (with a filter) and jumps the transcript to the one you pick; needs fullscreen TUI mode
+- 🎯 **Focus mode** — `/final` (or `alt+g`) collapses the transcript to just the final response and restores on a second trigger; needs fullscreen TUI mode
 - 🌈 **Gradient startup** — 9-row gradient "pi" logo derived from your theme accent, key hints, ready indicator, and OSC 11 terminal background sync so the whole window matches the theme
 - 🖥️ **Custom Status Bar** — real-time footer showing model, thinking level, cwd, git branch, context usage (%), and API cost (used when the custom editor is off)
 - 🎨 **Catppuccin Dark Theme** — Dark theme based on [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) with 64+ color mappings
@@ -80,6 +81,14 @@ Answering... 󰅐 12.4s
 
 Filter your prompts and jump the transcript to one of them. See [docs/table-of-contents.md](./docs/table-of-contents.md).
 
+### Focus mode
+
+```
+/final   (or alt+g)
+```
+
+Collapse everything except the final response; trigger again to restore. See [docs/final-response.md](./docs/final-response.md).
+
 ## 🎨 Themes
 
 ```
@@ -100,7 +109,7 @@ pi-ui/
 │   ├── startup.ts   # Gradient logo header + compact resource summary
 │   ├── editor/      # BoxEditor + style presets + cluster helper
 │   ├── tools/       # Tool badges, collapse decisions, split diff, presentation styles
-│   ├── navigation/  # `/toc` transcript table of contents
+│   ├── navigation/  # `/toc` transcript table of contents, `/final` focus mode
 │   ├── messages/    # Prefixes, boxed blocks, code/quote bands, streaming seam
 │   ├── startup.ts   # Gradient pi logo header + clean startup
 │   ├── core/        # git status, response speed

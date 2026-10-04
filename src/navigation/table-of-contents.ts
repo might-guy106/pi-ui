@@ -34,7 +34,7 @@ function capitalizeKeyText(text: string): string {
 		.join("/");
 }
 
-type TranscriptPort = {
+export type TranscriptPort = {
 	scrollView: any;
 	document: Component;
 	width: number;
@@ -69,7 +69,7 @@ function isContainerLike(node: any): node is Component & {
 }
 
 /** The fullscreen transcript scroll view and its document, when available. */
-function resolveTranscript(tui: any): TranscriptPort | undefined {
+export function resolveTranscript(tui: any): TranscriptPort | undefined {
 	if (!tui || tui.mode !== "fullscreen") return undefined;
 	const scrollView = typeof tui.getPrimaryScrollView === "function" ? tui.getPrimaryScrollView() : undefined;
 	if (!scrollView || typeof scrollView.scrollTo !== "function") return undefined;
