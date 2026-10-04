@@ -37,24 +37,21 @@ Anything that touches the registry (installs, `npm publish`) should pass `--regi
 
 ## Publishing a New Version
 
-The release convention is a bare-version commit (`1.9.0`, not `v1.9.0`) plus a `v`-prefixed tag:
-
 ```bash
-npm version patch --no-git-tag-version   # or: minor | major
-# commit message: the bare version, e.g. "1.9.0"
-git add package.json package-lock.json && git commit -m "1.9.0"
-git tag v1.9.0
+npm version patch   # or: minor | major
 git push origin main --tags
 ```
 
-That's it — pushing the tag triggers GitHub Actions (`.github/workflows/release.yml`) which:
+That's it — `npm version` bumps `package.json` + `package-lock.json`, commits as `v1.9.0` and tags `v1.9.0` in one step. The commit message doesn't matter to the release; the tag does. Pushing the tag triggers GitHub Actions (`.github/workflows/release.yml`) which:
 
 1. Validates the tag matches `package.json`'s version (fails the run on mismatch),
 2. Skips publishing if that version already exists on npm (safe to re-run a tag),
 3. Publishes to npm with provenance using the `NPM_TOKEN` repo secret,
 4. Creates a GitHub Release with generated notes.
 
-You never publish from your machine — the expired local token in `~/.npmrc` doesn't matter for releases.
+You never publish from your machine — an expired or missing local token in `~/.npmrc` doesn't affect releases.
+
+Earlier releases (up to 1.9.0) used bare-version commit messages (`1.9.0`) with a manually created tag; that history is fine — from here on, prefer the one-command `npm version` flow.
 
 ## One-time Secrets Setup
 
