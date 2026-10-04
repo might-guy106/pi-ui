@@ -1,6 +1,8 @@
 import { Markdown, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 
 import { paintBand, resolveBandColor } from "../theme/block-band.ts";
+import { fgHex, isHexColor } from "../theme/ansi.ts";
+import { getThemeExtra } from "../theme/theme-extras.ts";
 
 const PATCHED = Symbol.for("pi-ui.markdown-codeblock-renderer.patched");
 
@@ -35,6 +37,13 @@ function styleCodeBlockLanguage(component: MarkdownLike, language: string): stri
 	const codeBlockBorder = component.theme?.codeBlockBorder;
 	const label = `#${language}`;
 	const styledLabel = typeof italic === "function" ? italic(label) : label;
+	// The label sits on the band, which is usually a different colour from the
+	// page; themes can pick a readable label colour, falling back to the
+	// border colour used before.
+	const labelColor = getThemeExtra(component.theme, "codeBlockLabelColor");
+	if (isHexColor(labelColor)) {
+		return fgHex(component.theme, labelColor, styledLabel);
+	}
 	return typeof codeBlockBorder === "function" ? codeBlockBorder(styledLabel) : styledLabel;
 }
 

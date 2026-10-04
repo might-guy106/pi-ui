@@ -142,9 +142,10 @@ const codeLines = codeRaw.map(stripAnsi);
 check("no codeblock rail glyph", !codeLines.join("\n").includes("┃"), codeLines.join("\n"));
 check("codeblock language label shown", codeLines.some((l) => l.includes("#ts")));
 check("codeblock rows banded full width", codeRaw.filter((l) => stripAnsi(l).includes("const ")).every((l) => /\x1b\[48;2;/.test(l) && stripAnsi(l).length === 80), codeRaw.join("\n"));
-check("codeblock band colour from theme extra", resolveBandColor(theme, "codeBlockBg", "cardBg", "toolPendingBg") === "#1e1e2e", resolveBandColor(theme, "codeBlockBg", "cardBg", "toolPendingBg"));
+check("codeblock band colour from theme extra", resolveBandColor(theme, "codeBlockBg", "cardBg", "toolPendingBg") === "#3b3736", resolveBandColor(theme, "codeBlockBg", "cardBg", "toolPendingBg"));
 check("quoteband colour from theme extra", resolveBandColor(theme, "quoteBandBg", "cardBg", "customMessageBg") === "#181825", resolveBandColor(theme, "quoteBandBg", "cardBg", "customMessageBg"));
-check("band extras registered", getThemeExtra(theme, "codeBlockBg") === "#1e1e2e" && getThemeExtra(theme, "quoteBandBg") === "#181825");
+check("band extras registered", getThemeExtra(theme, "codeBlockBg") === "#3b3736" && getThemeExtra(theme, "quoteBandBg") === "#181825");
+check("codeblock label uses the readable label colour", codeRaw.some((l) => stripAnsi(l).includes("#ts") && l.includes("38;2;166;173;200")), codeRaw.filter((l) => stripAnsi(l).includes("#ts")).join("\n"));
 const copiedCode = asSelection(codeRaw).join("\n");
 check("selection copies code verbatim", copiedCode.includes("const x = 1;") && copiedCode.includes("const y = 2;") && !/[┃│]/.test(copiedCode), copiedCode);
 

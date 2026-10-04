@@ -22,6 +22,7 @@ const HARDCODED_DEFAULTS: Record<string, string> = {
 	quoteChar: "┆",
 	quoteColor: "",
 	codeBlockBg: "",
+	codeBlockLabelColor: "",
 	quoteBandBg: "",
 	inputBorderColor: "",
 	bashPromptColor: "",
