@@ -65,10 +65,9 @@ function getAssistantBodyWidth(width: number): number {
 
 function addAssistantGutter(lines: string[]): string[] {
 	const indent = " ".repeat(safeVisibleWidth(composePrefixedLine("")));
-	return lines.map((line) => {
-		if (stripAnsi(line).trim().length === 0) return line;
-		return `${indent}${dropLeadingColumns(line, 1)}`;
-	});
+	// Indent every row uniformly: painted rows (code/quote bands) are whitespace-
+	// only after stripping ANSI and must shift together with the text rows.
+	return lines.map((line) => `${indent}${dropLeadingColumns(line, 1)}`);
 }
 
 const COLLAPSED_TAIL_MIN_BUDGET = 16;
@@ -185,7 +184,6 @@ function alignContinuationLines(lines: string[], targetIndex: number): void {
 	const indent = " ".repeat(safeVisibleWidth(composePrefixedLine("")));
 	for (let i = targetIndex + 1; i < lines.length; i++) {
 		const line = lines[i] ?? "";
-		if (stripAnsi(line).trim().length === 0) continue;
 		lines[i] = `${indent}${dropLeadingColumns(line, 1)}`;
 	}
 }

@@ -67,7 +67,9 @@ function alignContinuationLines(lines: string[], targetIndex: number): void {
 	for (let i = targetIndex + 1; i < lines.length; i++) {
 		const line = lines[i] ?? "";
 		const clean = stripAnsi(line);
-		if (clean.trim().length === 0) {
+		// A whitespace-only row with a painted background is a content row (a
+		// code/quote band), not a blank spacer: align it like the other rows.
+		if (clean.trim().length === 0 && !line.includes("\x1b[48")) {
 			lines[i] = continuationSegment.trimEnd();
 			continue;
 		}
@@ -133,7 +135,8 @@ export function installUserMessagePrefix(theme: any): void {
 			output[targetIndex] = padLine(presentationLine);
 			for (let i = targetIndex + 1; i < output.length; i++) {
 				const continuation = output[i] ?? "";
-				if (stripAnsi(continuation).trim().length === 0) continue;
+				// Background-painted rows are content (code/quote bands), not blanks.
+				if (stripAnsi(continuation).trim().length === 0 && !continuation.includes("\x1b[48")) continue;
 				output[i] = padLine(continuation);
 			}
 		}

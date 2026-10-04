@@ -170,6 +170,34 @@ const stubLines = new Markdown("> stub quote", 0, 0, stubTheme).render(40);
 check("quote keeps italic and quote colour", stubLines.some((l) => l.includes("\x1b[3m") && l.includes("\x1b[38;2;1;2;3m") && l.includes("\x1b[48;2;")), JSON.stringify(stubLines));
 check("quote renders no border on the stub theme", !stubLines.join("").includes("│"), JSON.stringify(stubLines));
 
+// --- band rows stay aligned through the assistant gutter ---
+// In this repo the component's own Markdown lives in a nested copy of pi-tui,
+// so resolve it the way the component resolves it; in the real runtime the
+// loader aliases every import to one copy.
+const componentRequire = createRequire(new URL("../node_modules/@earendil-works/pi-coding-agent/dist/index.js", import.meta.url));
+const { Markdown: ComponentMarkdown } = componentRequire("@earendil-works/pi-tui");
+installMarkdownCodeBlockRenderer(ComponentMarkdown);
+installMarkdownQuoteRenderer(ComponentMarkdown);
+
+const bandMsg = {
+	role: "assistant",
+	content: [{ type: "text", text: "Intro.\n\n```md\nfirst line that is long enough to wrap somewhere\n\nsecond line\n```\n\n> a quoted note\n\nOutro." }],
+	usage: {},
+};
+beginAssistantStream(bandMsg);
+const bandComponent = new AssistantMessageComponent(bandMsg, theme);
+const bandRendered = bandComponent.render(80);
+endAssistantStream();
+
+const bandRows = bandRendered.filter((line) => line.includes("\x1b[48;2;"));
+const bandSpans = bandRows.map((line) => [
+	stripAnsi(line.slice(0, line.indexOf("\x1b[48;2;"))).length,
+	stripAnsi(line).length,
+]);
+check("band rows include label, code, blank and quote rows", bandRows.length >= 4, String(bandRows.length));
+check("band rows share one span", new Set(bandSpans.map((span) => span.join(":"))).size === 1, JSON.stringify(bandSpans));
+check("no rail glyphs in the full assistant render", !stripAnsi(bandRendered.join("\n")).match(/[┃│┆]/), bandRendered.join("\n"));
+
 const tableMarkdown = new Markdown("| a | b |\n| - | - |\n| 1 | 2 |", 0, 0, theme);
 const tableLines = tableMarkdown.render(80).map(stripAnsi);
 check("table keeps its borders", tableLines.some((l) => l.includes("│ a │ b │")), tableLines.join("\n"));
