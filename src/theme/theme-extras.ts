@@ -21,6 +21,8 @@ const HARDCODED_DEFAULTS: Record<string, string> = {
 	quoteStyle: "false",
 	quoteChar: "┆",
 	quoteColor: "",
+	codeBlockBg: "",
+	quoteBandBg: "",
 	inputBorderColor: "",
 	bashPromptColor: "",
 	tagBgColor: "",
@@ -266,7 +268,7 @@ function resolveThemeColorToken(value: string): string {
 }
 
 function resolveThemeExtraValue(key: string, value: string): string {
-	if (!key.endsWith("Color")) return value;
+	if (!key.endsWith("Color") && !key.endsWith("Bg")) return value;
 	return resolveThemeColorToken(value) || value;
 }
 
@@ -283,6 +285,18 @@ export function getThemePageBackground(theme: any): string {
 	const directBg = cachedVars && typeof cachedVars.bg === "string" ? cachedVars.bg : "";
 	if (isHexColor(directBg)) return directBg;
 	return resolveThemeExportColor("pageBg");
+}
+
+/** Read one colour from the theme's "export" block (pageBg, cardBg, infoBg...). */
+export function getThemeExportColor(theme: any, key: string): string {
+	ensureThemeExportLoaded(theme);
+	return resolveThemeExportColor(key);
+}
+
+/** Resolve a theme colour name ("toolPendingBg", "overlay"...) to a hex value. */
+export function getThemeColorToken(theme: any, value: string): string {
+	ensureThemeExportLoaded(theme);
+	return resolveThemeColorToken(value);
 }
 
 export function getThemeVarBackground(theme: any, varName: string): string {

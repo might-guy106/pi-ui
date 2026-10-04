@@ -2,6 +2,7 @@
 // Smoke test: message prefixes (assistant/user), content-run probe, core
 // message blocks, and the markdown codeblock rail. Uses the real pi theme.
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -121,14 +122,57 @@ check("history component not tagged as live", attachComponentToStream(historyCom
 endAssistantStream();
 check("stream ended clears tags", attachComponentToStream(assistantComponent, assistantMsg) === false);
 
-// --- markdown codeblock rail ---
+// --- markdown codeblock band + quote band ---
+const { installMarkdownQuoteRenderer } = await import("../src/messages/markdown-quote-renderer.ts");
+const { getThemeExtra } = await import("../src/theme/theme-extras.ts");
+const { resolveBandColor } = await import("../src/theme/block-band.ts");
+const { sliceByColumn, stripTerminalSequences } = await import("@earendil-works/pi-tui");
 installMarkdownCodeBlockRenderer();
-const markdown = new Markdown("# Heading\n\n```ts\nconst x = 1;\nconst y = 2;\n```\n\nAfter text.", 0, 0, theme);
-const mdLines = markdown.render(80).map(stripAnsi);
-check("codeblock rail applied", mdLines.some((l) => l.trimStart().startsWith("┃")), mdLines.join("\n"));
-check("codeblock language label shown", mdLines.some((l) => l.includes("#ts")));
-check("code content preserved", mdLines.some((l) => l.includes("const x = 1;")));
-check("prose outside codeblock untouched", mdLines.some((l) => l.includes("After text.") && !l.includes("┃")));
+installMarkdownQuoteRenderer();
+// Point the extras lookup at the packaged theme so the band colours resolve.
+setFullTheme({ name: "catppuccin-dark", sourcePath: new URL("../themes/catppuccin-dark.json", import.meta.url).pathname }, true);
+
+// Mirror what a mouse selection produces: slice columns, strip ANSI, trim end.
+const asSelection = (lines, width = 80) =>
+	lines.map((line) => stripTerminalSequences(sliceByColumn(line, 0, width, true)).trimEnd());
+
+const codeMarkdown = new Markdown("```ts\nconst x = 1;\nconst y = 2;\n```", 0, 0, theme);
+const codeRaw = codeMarkdown.render(80);
+const codeLines = codeRaw.map(stripAnsi);
+check("no codeblock rail glyph", !codeLines.join("\n").includes("┃"), codeLines.join("\n"));
+check("codeblock language label shown", codeLines.some((l) => l.includes("#ts")));
+check("codeblock rows banded full width", codeRaw.filter((l) => stripAnsi(l).includes("const ")).every((l) => /\x1b\[48;2;/.test(l) && stripAnsi(l).length === 80), codeRaw.join("\n"));
+check("codeblock band colour from theme extra", resolveBandColor(theme, "codeBlockBg", "cardBg", "toolPendingBg") === "#1e1e2e", resolveBandColor(theme, "codeBlockBg", "cardBg", "toolPendingBg"));
+check("quoteband colour from theme extra", resolveBandColor(theme, "quoteBandBg", "cardBg", "customMessageBg") === "#181825", resolveBandColor(theme, "quoteBandBg", "cardBg", "customMessageBg"));
+check("band extras registered", getThemeExtra(theme, "codeBlockBg") === "#1e1e2e" && getThemeExtra(theme, "quoteBandBg") === "#181825");
+const copiedCode = asSelection(codeRaw).join("\n");
+check("selection copies code verbatim", copiedCode.includes("const x = 1;") && copiedCode.includes("const y = 2;") && !/[┃│]/.test(copiedCode), copiedCode);
+
+const quoteMarkdown = new Markdown("> quoted note\n> second line", 0, 0, theme);
+const quoteRaw = quoteMarkdown.render(80);
+const quoteLines = quoteRaw.map(stripAnsi);
+check("no quote border glyph", !quoteLines.join("\n").includes("│"), quoteLines.join("\n"));
+check("quote text preserved", quoteLines.some((l) => l.includes("quoted note")) && quoteLines.some((l) => l.includes("second line")));
+check("quote rows banded full width", quoteRaw.every((l) => /\x1b\[48;2;/.test(l) && stripAnsi(l).length === 80), quoteRaw.join("\n"));
+const copiedQuote = asSelection(quoteRaw).join("\n");
+check("selection copies quote verbatim", copiedQuote === "quoted note\nsecond line", copiedQuote);
+
+// Theme italic support varies by terminal, so check the styling path on a stub
+// theme that reports its own markers.
+const identity = (text) => text;
+const stubTheme = {
+	heading: identity, link: identity, linkUrl: identity, code: identity, codeBlock: identity,
+	codeBlockBorder: identity, quote: (text) => `\x1b[38;2;1;2;3m${text}\x1b[39m`, hr: identity,
+	listBullet: identity, bold: identity, italic: (text) => `\x1b[3m${text}\x1b[23m`,
+	strikethrough: identity, underline: identity,
+};
+const stubLines = new Markdown("> stub quote", 0, 0, stubTheme).render(40);
+check("quote keeps italic and quote colour", stubLines.some((l) => l.includes("\x1b[3m") && l.includes("\x1b[38;2;1;2;3m") && l.includes("\x1b[48;2;")), JSON.stringify(stubLines));
+check("quote renders no border on the stub theme", !stubLines.join("").includes("│"), JSON.stringify(stubLines));
+
+const tableMarkdown = new Markdown("| a | b |\n| - | - |\n| 1 | 2 |", 0, 0, theme);
+const tableLines = tableMarkdown.render(80).map(stripAnsi);
+check("table keeps its borders", tableLines.some((l) => l.includes("│ a │ b │")), tableLines.join("\n"));
 
 // --- core message blocks: CustomMessageComponent boxed styling ---
 const { CustomMessageComponent } = await import("@earendil-works/pi-coding-agent");

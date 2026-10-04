@@ -20,7 +20,7 @@
 
 - 🎛️ **Editor user zone** — the prompt area becomes a styled zone with 4 presets (`droid`, `gemini`, `cli-dock`, `nvim`): model, thinking level, context meter, git branch with +/- LOC, response speed, and token usage rendered right around your input — ported from [pi-droid-styling](https://github.com/sting8k/pi-droid-styling)
 - 🧰 **Tool badges** — boxed badges for bash, read, write, edit, grep, find, and ls that **collapse to a single row when the call finishes** (click a row or press `Ctrl+O` to open it), with elapsed time, output size, a side-by-side split diff for edits, and a `reasonix` compact-row mode optional
-- 💬 **Message styling** — `•` assistant prefix, muted thinking with a live collapsed-tail view, boxed compaction/skill/branch blocks, and a `┃`-railed codeblock renderer; user messages stay plain (optional `❯` prefix and turn dividers in config)
+- 💬 **Message styling** — `•` assistant prefix, muted thinking with a live collapsed-tail view, boxed compaction/skill/branch blocks, and full-width bands for code blocks and quotes (no rail characters, so selections copy the text alone); user messages stay plain (optional `❯` prefix and turn dividers in config)
 - 🧭 **Table of contents** — `/toc` lists your prompts (with a filter) and jumps the transcript to the one you pick; needs fullscreen TUI mode
 - 🌈 **Gradient startup** — 9-row gradient "pi" logo derived from your theme accent, key hints, ready indicator, and OSC 11 terminal background sync so the whole window matches the theme
 - 🖥️ **Custom Status Bar** — real-time footer showing model, thinking level, cwd, git branch, context usage (%), and API cost (used when the custom editor is off)
@@ -101,7 +101,7 @@ pi-ui/
 │   ├── editor/      # BoxEditor + style presets + cluster helper
 │   ├── tools/       # Tool badges, collapse decisions, split diff, presentation styles
 │   ├── navigation/  # `/toc` transcript table of contents
-│   ├── messages/    # Prefixes, boxed blocks, codeblock rail, streaming seam
+│   ├── messages/    # Prefixes, boxed blocks, code/quote bands, streaming seam
 │   ├── startup.ts   # Gradient pi logo header + clean startup
 │   ├── core/        # git status, response speed
 │   ├── theme/       # ANSI toolkit, theme extras, OSC 11 background sync

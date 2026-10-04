@@ -31,16 +31,18 @@ User messages render as plain text on the theme's message background — no pref
 
 Compaction summaries, skill invocations, branch summaries, and extension custom messages render as boxed blocks with an icon, a label (token count for compaction, skill name, etc.), and a collapsible markdown body — matching the tool-badge visual language.
 
-## Markdown code blocks
+## Markdown code blocks and quotes
 
-Code blocks in any message render with a `┃` rail and an italic `#lang` label, using the theme's syntax highlighting:
+Code blocks render as a full-width background band with an italic `#lang` label, using the theme's syntax highlighting. Quotes render on a dimmer band, italic, in the theme's quote colour:
 
 ```
-┃ #ts
-┃ const x = 1;
+#ts
+const x = 1;
 ```
 
-Long code lines wrap inside the rail.
+Neither uses a leading rail character. A rail occupies cells on every line, so it lands in every copied selection; a band sits behind the text and copies as the text alone. Band colours come from the theme's `extras` (`codeBlockBg`, `quoteBandBg`), then from its `export` block (`cardBg`), then from `toolPendingBg` / `customMessageBg`. Long lines wrap inside the band.
+
+The one piece of chrome a selection still copies is the `#lang` label row. Remove that by deleting the `styleCodeBlockLanguage` push in `src/messages/markdown-codeblock-renderer.ts`.
 
 ## Streaming-aware rendering
 

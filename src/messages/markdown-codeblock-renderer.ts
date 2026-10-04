@@ -1,7 +1,8 @@
-import { Markdown, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { Markdown, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+
+import { paintBand, resolveBandColor } from "../theme/block-band.ts";
 
 const PATCHED = Symbol.for("pi-ui.markdown-codeblock-renderer.patched");
-const DEFAULT_CODE_BLOCK_RAIL = "┃ ";
 
 interface MarkdownLike {
 	theme?: {
@@ -29,11 +30,6 @@ function styleCodeLine(component: MarkdownLike, line: string): string {
 	return typeof codeBlock === "function" ? codeBlock(line) : line;
 }
 
-function styleCodeBlockRail(component: MarkdownLike): string {
-	const codeBlockBorder = component.theme?.codeBlockBorder;
-	return typeof codeBlockBorder === "function" ? codeBlockBorder(DEFAULT_CODE_BLOCK_RAIL) : DEFAULT_CODE_BLOCK_RAIL;
-}
-
 function styleCodeBlockLanguage(component: MarkdownLike, language: string): string {
 	const italic = component.theme?.italic;
 	const codeBlockBorder = component.theme?.codeBlockBorder;
@@ -55,23 +51,22 @@ function renderHighlightedCode(component: MarkdownLike, code: string, language: 
 	return code.split("\n").map((line) => styleCodeLine(component, line));
 }
 
-function renderCodeBlockLine(rail: string, line: string, width: number): string[] {
-	const contentWidth = Math.max(1, width - visibleWidth(rail));
-	return wrapTextWithAnsi(line, contentWidth).map((wrappedLine) => `${rail}${wrappedLine}`);
-}
-
 function renderCodeBlock(component: MarkdownLike, token: CodeTokenLike, width: number, nextTokenType: string | undefined): string[] {
 	const lines: string[] = [];
 	const language = getCodeLanguage(token);
 	const code = typeof token.text === "string" ? token.text : "";
-	const rail = styleCodeBlockRail(component);
+	// Full-width band instead of a "┃ " rail: the block reads as a card and a
+	// selection copies the code lines with no leading characters.
+	const band = resolveBandColor(component.theme, "codeBlockBg", "cardBg", "toolPendingBg");
 
 	if (language) {
-		lines.push(...renderCodeBlockLine(rail, styleCodeBlockLanguage(component, language), width));
+		lines.push(paintBand(component.theme, styleCodeBlockLanguage(component, language), width, band));
 	}
 
 	for (const line of renderHighlightedCode(component, code, language)) {
-		lines.push(...renderCodeBlockLine(rail, line, width));
+		for (const wrappedLine of wrapTextWithAnsi(line, width)) {
+			lines.push(paintBand(component.theme, wrappedLine, width, band));
+		}
 	}
 
 	if (nextTokenType && nextTokenType !== "space") {

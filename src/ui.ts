@@ -23,6 +23,7 @@ import { installAssistantMessagePrefix } from "./messages/assistant-prefix.ts";
 import { installUserMessagePrefix } from "./messages/user-prefix.ts";
 import { installCoreMessageBlockStyling, setCoreMessageBlockTheme } from "./messages/core-message-blocks.ts";
 import { installMarkdownCodeBlockRenderer } from "./messages/markdown-codeblock-renderer.ts";
+import { installMarkdownQuoteRenderer } from "./messages/markdown-quote-renderer.ts";
 import {
 	beginAssistantStream,
 	endAssistantStream,
@@ -145,6 +146,7 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 	installAssistantMessagePrefix(ctx.ui.theme);
 	installUserMessagePrefix(ctx.ui.theme);
 	installMarkdownCodeBlockRenderer();
+	installMarkdownQuoteRenderer();
 	installCoreMessageBlockStyling({
 		CompactionSummaryMessageComponent,
 		SkillInvocationMessageComponent,

@@ -1,6 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
   "name": "catppuccin-dark",
+  "extras": {
+    "codeBlockBg": "surface",
+    "quoteBandBg": "#181825"
+  },
   "vars": {
     "primary": "#6c7086",
     "secondary": "#a6adc8",

@@ -34,7 +34,8 @@ src/
 │   ├── assistant-streaming-state.ts # Tag-once live-stream seam
 │   ├── core-message-blocks.ts     # Boxed compaction/skill/branch/custom blocks
 │   ├── boxed-message-block.ts     # Boxed block factory
-│   └── markdown-codeblock-renderer.ts # ┃ rail + #lang codeblock rendering
+│   ├── markdown-codeblock-renderer.ts # Full-width band + #lang label (no rail)
+│   └── markdown-quote-renderer.ts # Quote band, replaces the `│ ` border
 ├── navigation/
 │   └── table-of-contents.ts # `/toc` — user-message list + transcript jump (fullscreen ScrollView)
 ├── core/
@@ -78,7 +79,7 @@ Private-but-stable internals used (all feature-detected, degrade gracefully):
 - `ToolExecutionComponent.prototype` (compact spacing wrapper + default badge: `getRenderContext`, `markExecutionStarted`, `updateResult`, `updateDisplay`, `getCallRenderer`, `getResultRenderer`, `contentTextRegion`, `createResultRegion`, `mouseLayout`).
 - `AssistantMessageComponent.prototype.render`/`updateContent` + private `contentContainer.children` (assistant prefix; child layout discovered at runtime by the content-runs probe — per-block vs run-grouped).
 - `UserMessageComponent.prototype.render` (user prefix; strips 1-column Markdown padding).
-- `Markdown.prototype.renderToken` (codeblock rail).
+- `Markdown.prototype.renderToken` (codeblock band + language label, quote band).
 - `CompactionSummaryMessageComponent`/`SkillInvocationMessageComponent`/`BranchSummaryMessageComponent`/`CustomMessageComponent` display builders (boxed core blocks).
 - `InteractiveMode.prototype.renderCurrentSessionState` (resume tool refresh), `.updateEditorBorderColor` (theme re-sync), `.chatContainer`/`.session` (read-only).
 - `Editor` internals read via `as any` for the slash-autocomplete re-render: `state.{lines,cursorLine,cursorCol}`, `autocompleteState`, `autocompleteList.{filteredItems,selectedIndex,maxVisible}`.
