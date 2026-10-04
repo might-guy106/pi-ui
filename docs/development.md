@@ -37,13 +37,24 @@ Anything that touches the registry (installs, `npm publish`) should pass `--regi
 
 ## Publishing a New Version
 
+The release convention is a bare-version commit (`1.9.0`, not `v1.9.0`) plus a `v`-prefixed tag:
+
 ```bash
-npm version patch   # or: minor | major
-git push origin main
-git push origin --tags
+npm version patch --no-git-tag-version   # or: minor | major
+# commit message: the bare version, e.g. "1.9.0"
+git add package.json package-lock.json && git commit -m "1.9.0"
+git tag v1.9.0
+git push origin main --tags
 ```
 
-That's it — pushing the tag triggers GitHub Actions which publishes to npm and creates a GitHub Release automatically.
+That's it — pushing the tag triggers GitHub Actions (`.github/workflows/release.yml`) which:
+
+1. Validates the tag matches `package.json`'s version (fails the run on mismatch),
+2. Skips publishing if that version already exists on npm (safe to re-run a tag),
+3. Publishes to npm with provenance using the `NPM_TOKEN` repo secret,
+4. Creates a GitHub Release with generated notes.
+
+You never publish from your machine — the expired local token in `~/.npmrc` doesn't matter for releases.
 
 ## One-time Secrets Setup
 
@@ -57,7 +68,7 @@ The workflow needs an `NPM_TOKEN` repo secret:
 |---|---|
 | Workflow not triggered | `git push origin --tags` |
 | Tag/version mismatch | Delete tag, fix `package.json`, re-tag |
-| `403` on npm publish | Regenerate `NPM_TOKEN` and update repo secret |
+| `403` on npm publish (in the workflow) | Regenerate `NPM_TOKEN` and update repo secret |
 
 To re-push a tag:
 ```bash
