@@ -8,7 +8,9 @@ pi-ui's editor zone works with any active pi theme: it reads theme tokens (`acce
 
 ## Theme extras
 
-Some fine-grained colors (prompt color, slash-menu colors, input border) are read as `extras` from the active theme's JSON file on disk, with sensible fallbacks when absent:
+Some fine-grained colors (prompt color, slash-menu colors, input border) are read as extras from the active theme's JSON file on disk, with sensible fallbacks when absent.
+
+pi validates theme files against a schema that rejects unknown top-level keys, so extras live in the theme's `vars` block (which accepts arbitrary string keys) rather than a dedicated `extras` block. An `extras` block is still read first if present, for themes that have one.
 
 | Extra key | Used for | Fallback |
 |---|---|---|
@@ -20,7 +22,7 @@ Some fine-grained colors (prompt color, slash-menu colors, input border) are rea
 | `slashSelectedColor` | highlighted slash-menu row | accent |
 | `slashHintColor` | slash-menu navigation hint | dim |
 
-Extras are resolved from the theme file found via `theme.sourcePath`; if the theme has no `extras` block every key falls back.
+Extras are resolved from the theme file found via `theme.sourcePath`; if the theme defines none of these keys every key falls back.
 
 ## Planned
 

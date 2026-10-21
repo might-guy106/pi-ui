@@ -222,7 +222,7 @@ export function getThemeExtra(_theme: any, key: string): string {
 		}
 	}
 
-	const extraValue = cachedExtras?.[key];
+	const extraValue = cachedExtras?.[key] ?? cachedVars?.[key];
 	if (typeof extraValue === "string" || typeof extraValue === "boolean") {
 		return resolveThemeExtraValue(key, String(extraValue));
 	}
