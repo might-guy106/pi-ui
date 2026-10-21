@@ -1,7 +1,6 @@
 import {
 	BranchSummaryMessageComponent,
 	CompactionSummaryMessageComponent,
-	CustomEditor,
 	CustomMessageComponent,
 	InteractiveMode,
 	SkillInvocationMessageComponent,
@@ -10,7 +9,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { loadConfig } from "./config.ts";
 import { BoxEditor } from "./editor/box-editor.ts";
-import { resolveUserZoneStyle, USER_ZONE_STYLE_NAMES } from "./editor/user-zone.ts";
+import { resolveUserZoneStyle } from "./editor/user-zone.ts";
 import { createGitBranchFetcher } from "./core/git-status.ts";
 import type { GitBranchFetcher } from "./core/git-status.ts";
 import { createAssistantSpeedTracker } from "./core/assistant-speed.ts";
@@ -100,7 +99,9 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 
 	const config = loadConfig();
 	const userZoneStyle = resolveUserZoneStyle(config.userZoneStyle);
-	const useBoxEditor = USER_ZONE_STYLE_NAMES.includes(userZoneStyle.name as (typeof USER_ZONE_STYLE_NAMES)[number]);
+	// The custom editor owns pi's single editor slot, which other extensions
+	// (e.g. pi-subagent-manager's arrow navigation) also need. Off by default.
+	const useBoxEditor = config.inputBox.enabled;
 
 	// Sync the terminal emulator's background to the theme page background
 	// (OSC 11). Skipped on Windows/WSL unless forceOSC11 is set.
@@ -233,11 +234,24 @@ export async function setupSessionUI(pi: ExtensionAPI, ctx: ExtensionContext): P
 			);
 		});
 	} else {
-		ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+		// The editor slot stays untouched so other extensions keep their own
+		// editor. Capture the TUI through a zero-height widget instead, so the
+		// table of contents, final-response shortcut and render hooks keep working.
+		ctx.ui.setWidget("pi-ui", (tui, theme) => {
+			const uiTheme = (ctx.ui.theme ?? theme) as any;
+			state.requestRender = () => tui.requestRender();
 			setTableOfContentsTui(tui);
 			setFinalResponseTui(tui);
-			return new CustomEditor(tui, theme as any, keybindings as any);
-		});
+			// (Re)apply the terminal background sync with the current theme.
+			state.restoreTerminalBackground?.();
+			state.restoreTerminalBackground = applyTerminalPageBackgroundOsc11(uiTheme, (tui as any).terminal, { force: config.forceOSC11 });
+			return {
+				invalidate() {},
+				render(): string[] {
+					return [];
+				},
+			};
+		}, { placement: "belowEditor" });
 	}
 
 	const runningToolCalls = new Set<string>();

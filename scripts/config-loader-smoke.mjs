@@ -29,6 +29,7 @@ const scaffolded = loadConfig();
 check("config scaffolds file on first read", existsSync(configPath()));
 check("config default userZoneStyle is gemini", scaffolded.userZoneStyle === "gemini", String(scaffolded.userZoneStyle));
 check("config default inputBox.style is auto", scaffolded.inputBox.style === "auto");
+check("config default inputBox.enabled is false", scaffolded.inputBox.enabled === false);
 check("config default footer is true", scaffolded.footer === true);
 
 writeFileSync(
@@ -39,6 +40,11 @@ await sleep(1100);
 const loaded = loadConfig();
 check("config picks up valid userZoneStyle", loaded.userZoneStyle === "nvim", String(loaded.userZoneStyle));
 check("config picks up inputBox.style", loaded.inputBox.style === "solid");
+check("config rejects non-boolean inputBox.enabled", loaded.inputBox.enabled === false);
+
+writeFileSync(configPath(), JSON.stringify({ inputBox: { enabled: true } }));
+await sleep(1100);
+check("config picks up inputBox.enabled", loadConfig().inputBox.enabled === true);
 check("config clamps maxExpandedLines", loaded.maxExpandedLines === 1000, String(loaded.maxExpandedLines));
 check("config merges custom working message", loaded.customWorkingMessage.running === "Cooking" && loaded.customWorkingMessage.working === "Working");
 

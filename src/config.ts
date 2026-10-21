@@ -14,6 +14,7 @@ export type CollapseToolOutput = "onComplete" | "always" | "never";
 
 export interface InputBoxConfig {
 	style: InputBoxStyle;
+	enabled: boolean;
 }
 
 export interface PiUiConfig {
@@ -45,7 +46,7 @@ const DEFAULT_CUSTOM_WORKING_MESSAGE: CustomWorkingMessageConfig = {
 	running: "Running",
 };
 
-const DEFAULT_INPUT_BOX: InputBoxConfig = { style: "auto" };
+const DEFAULT_INPUT_BOX: InputBoxConfig = { style: "auto", enabled: false };
 
 const DEFAULTS: PiUiConfig = {
 	userZoneStyle: "gemini",
@@ -130,7 +131,10 @@ function customWorkingMessageOrDefault(value: unknown): CustomWorkingMessageConf
 
 function inputBoxOrDefault(value: unknown): InputBoxConfig {
 	if (!isRecord(value)) return { ...DEFAULT_INPUT_BOX };
-	return { style: isInputBoxStyle(value.style) ? value.style : DEFAULT_INPUT_BOX.style };
+	return {
+		style: isInputBoxStyle(value.style) ? value.style : DEFAULT_INPUT_BOX.style,
+		enabled: booleanOrDefault(value.enabled, DEFAULT_INPUT_BOX.enabled),
+	};
 }
 
 function extraToolsOrDefault(value: unknown): string[] {

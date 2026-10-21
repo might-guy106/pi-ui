@@ -5,7 +5,7 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 ```json
 {
   "userZoneStyle": "gemini",
-  "inputBox": { "style": "auto" },
+  "inputBox": { "style": "auto", "enabled": false },
   "presentationStyle": "droid",
   "customWorkingMessage": {
     "working": "Working",
@@ -27,8 +27,9 @@ pi-ui reads `~/.pi/agent/pi-ui.json`. The file is created with defaults on first
 
 | Key | Options | Default | What it does |
 |---|---|---|---|
-| `userZoneStyle` | `droid`, `gemini`, `cli-dock`, `nvim` | `gemini` | Look of the prompt/editor zone and its status rows. Unknown values fall back to `droid`. See [editor-styles](./editor-styles.md). |
-| `inputBox.style` | `auto`, `halfblock`, `line`, `solid` | `auto` | Frame drawn around the input text. `auto` uses the style preset's frame (gemini → `halfblock`). `cli-dock` always renders an `outline` box regardless of this setting, and `droid` collapses `line` to no frame. Under `NO_COLOR`, `auto` resolves to `line`. |
+| `userZoneStyle` | `droid`, `gemini`, `cli-dock`, `nvim` | `gemini` | Look of the prompt/editor zone and its status rows. Unknown values fall back to `droid`. Only applies when `inputBox.enabled` is `true`. See [editor-styles](./editor-styles.md). |
+| `inputBox.enabled` | `true`, `false` | `false` | Install pi-ui's custom editor (`BoxEditor`). It takes over pi's single custom-editor slot, which other extensions may need — for example `pi-subagent-manager` installs its own editor there to get the `←`/`→` tree-navigation shortcuts. Keep this off to leave the slot to them. |
+| `inputBox.style` | `auto`, `halfblock`, `line`, `solid` | `auto` | Frame drawn around the input text. `auto` uses the style preset's frame (gemini → `halfblock`). `cli-dock` always renders an `outline` box regardless of this setting, and `droid` collapses `line` to no frame. Under `NO_COLOR`, `auto` resolves to `line`. Only applies when `inputBox.enabled` is `true`. |
 | `presentationStyle` | `droid`, `reasonix` | `droid` | Tool rendering language: `droid` = boxed cards with tinted backgrounds, `reasonix` = compact single-row lines, 80% width, no backgrounds. See [tools](./tools.md). |
 | `customWorkingMessage` | strings | see above | Rename the working-loader labels. Set only the ones you want to change; empty/missing strings keep the default. |
 | `alwaysExpanded` | `true`, `false` | `false` | Open tool results by default. `Ctrl+O` still toggles expansion per session. |

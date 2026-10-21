@@ -2,6 +2,8 @@
 
 The editor zone is rendered by `BoxEditor` (ported from pi-droid-styling's editor). It extends pi's built-in editor, so typing, history, undo, and the slash-command autocomplete behave exactly like stock pi — only the visuals change. Pick a style with `userZoneStyle` in `~/.pi/agent/pi-ui.json` (see [configuration](./configuration.md)).
 
+The custom editor is **off by default** (`"inputBox": { "enabled": false }`) because it takes over pi's single custom-editor slot, which other extensions like `pi-subagent-manager` need for their `←`/`→` shortcuts. Set `"inputBox": { "enabled": true }` to turn it on.
+
 ## `gemini` (default)
 
 A one-line divider above, one status row, half-block framed input, one-line footer.
